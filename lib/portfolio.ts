@@ -1,41 +1,31 @@
 import "server-only";
-import { getDB, PositionRow, TradeRow } from "./db";
+import { prisma } from "./prisma";
 
 export type TradeResult = { ok: true } | { ok: false; error: string };
 
-export async function getPosition(
-  userId: number,
-  slug: string,
-  weighting: string,
-): Promise<PositionRow | null> {
-  return await getDB()
-    .prepare(
-      "SELECT * FROM positions WHERE user_id = ? AND slug = ? AND weighting = ?",
-    )
-    .bind(userId, slug, weighting)
-    .first<PositionRow>();
+export async function getPosition(userId: bigint, slug: string, weighting: string) {
+  return prisma.position.findUnique({
+    where: { userId_slug_weighting: { userId, slug, weighting } },
+  });
 }
 
-export async function getAllPositions(userId: number): Promise<PositionRow[]> {
-  const res = await getDB()
-    .prepare(
-      "SELECT * FROM positions WHERE user_id = ? AND units > 0.0000001 ORDER BY slug",
-    )
-    .bind(userId)
-    .all<PositionRow>();
-  return res.results ?? [];
+export async function getAllPositions(userId: bigint) {
+  return prisma.position.findMany({
+    where: { userId, units: { gt: 0.0000001 } },
+    orderBy: { slug: "asc" },
+  });
 }
 
-export async function getTrades(userId: number, limit = 50): Promise<TradeRow[]> {
-  const res = await getDB()
-    .prepare("SELECT * FROM trades WHERE user_id = ? ORDER BY ts DESC LIMIT ?")
-    .bind(userId, limit)
-    .all<TradeRow>();
-  return res.results ?? [];
+export async function getTrades(userId: bigint, limit = 50) {
+  return prisma.trade.findMany({
+    where: { userId },
+    orderBy: { ts: "desc" },
+    take: limit,
+  });
 }
 
 export async function buy(
-  userId: number,
+  userId: bigint,
   slug: string,
   weighting: string,
   amount: number,
@@ -44,37 +34,44 @@ export async function buy(
   if (!(amount > 0)) return { ok: false, error: "Enter a positive amount." };
   if (!(spot > 0)) return { ok: false, error: "Price unavailable right now." };
 
-  const db = getDB();
-  // Atomic, race-safe cash deduction: only succeeds if the balance covers it.
-  const deduct = await db
-    .prepare("UPDATE users SET cash = cash - ?1 WHERE id = ?2 AND cash >= ?1")
-    .bind(amount, userId)
-    .run();
-  if (deduct.meta.changes !== 1)
-    return { ok: false, error: "Not enough cash for that amount." };
+  const ran = await prisma.$transaction(async (tx) => {
+    // Atomic, race-safe cash deduction.
+    const user = await tx.user.findFirstOrThrow({ where: { id: userId } });
+    if (user.cash < amount) return false;
+    await tx.user.update({
+      where: { id: userId },
+      data: { cash: user.cash - amount },
+    });
 
-  const units = amount / spot;
-  await db.batch([
-    db
-      .prepare(
-        `INSERT INTO positions (user_id, slug, weighting, units, cost)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(user_id, slug, weighting)
-         DO UPDATE SET units = units + excluded.units, cost = cost + excluded.cost`,
-      )
-      .bind(userId, slug, weighting, units, amount),
-    db
-      .prepare(
-        `INSERT INTO trades (user_id, slug, weighting, side, units, price, amount, ts)
-         VALUES (?, ?, ?, 'buy', ?, ?, ?, ?)`,
-      )
-      .bind(userId, slug, weighting, units, spot, amount, Date.now()),
-  ]);
-  return { ok: true };
+    const units = amount / spot;
+    await tx.position.upsert({
+      where: { userId_slug_weighting: { userId, slug, weighting } },
+      create: { userId, slug, weighting, units, cost: amount },
+      update: {
+        units: { increment: units },
+        cost: { increment: amount },
+      },
+    });
+    await tx.trade.create({
+      data: {
+        userId,
+        slug,
+        weighting,
+        side: "buy",
+        units,
+        price: spot,
+        amount,
+        ts: BigInt(Date.now()),
+      },
+    });
+    return true;
+  });
+
+  return ran ? { ok: true } : { ok: false, error: "Not enough cash for that amount." };
 }
 
 export async function sell(
-  userId: number,
+  userId: bigint,
   slug: string,
   weighting: string,
   units: number,
@@ -84,32 +81,41 @@ export async function sell(
     return { ok: false, error: "Enter a positive number of units." };
   if (!(spot > 0)) return { ok: false, error: "Price unavailable right now." };
 
-  const db = getDB();
-  // Reduce units and cost basis proportionally, in one guarded statement.
-  // SQLite evaluates all RHS expressions against the pre-update row, so
-  // `cost * (1 - ?1/units)` uses the original units. Only runs if enough held.
-  const reduce = await db
-    .prepare(
-      `UPDATE positions
-         SET cost = cost * (1 - ?1 / units), units = units - ?1
-       WHERE user_id = ?2 AND slug = ?3 AND weighting = ?4 AND units >= ?1`,
-    )
-    .bind(units, userId, slug, weighting)
-    .run();
-  if (reduce.meta.changes !== 1)
-    return { ok: false, error: "You don't hold that many units." };
+  const ran = await prisma.$transaction(async (tx) => {
+    const pos = await tx.position.findUnique({
+      where: { userId_slug_weighting: { userId, slug, weighting } },
+    });
+    if (!pos || pos.units < units) return false;
 
-  const proceeds = units * spot;
-  await db.batch([
-    db
-      .prepare("UPDATE users SET cash = cash + ? WHERE id = ?")
-      .bind(proceeds, userId),
-    db
-      .prepare(
-        `INSERT INTO trades (user_id, slug, weighting, side, units, price, amount, ts)
-         VALUES (?, ?, ?, 'sell', ?, ?, ?, ?)`,
-      )
-      .bind(userId, slug, weighting, units, spot, proceeds, Date.now()),
-  ]);
-  return { ok: true };
+    // Reduce cost basis proportionally to units sold.
+    const costReduction = (units / pos.units) * pos.cost;
+    await tx.position.update({
+      where: { userId_slug_weighting: { userId, slug, weighting } },
+      data: {
+        units: pos.units - units,
+        cost: pos.cost - costReduction,
+      },
+    });
+
+    const proceeds = units * spot;
+    await tx.user.update({
+      where: { id: userId },
+      data: { cash: { increment: proceeds } },
+    });
+    await tx.trade.create({
+      data: {
+        userId,
+        slug,
+        weighting,
+        side: "sell",
+        units,
+        price: spot,
+        amount: proceeds,
+        ts: BigInt(Date.now()),
+      },
+    });
+    return true;
+  });
+
+  return ran ? { ok: true } : { ok: false, error: "You don't hold that many units." };
 }

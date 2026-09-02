@@ -1,4 +1,4 @@
-# Bharat Indexes 🇮🇳
+# Bharat Indexes 
 
 Custom, S&P-500-style index trackers for the Indian market. Each "index" clubs
 together the NSE-listed stocks of a theme (Adani, Tata, EV, Agri, Copper,
@@ -11,17 +11,18 @@ watch the whole group move together, with a dedicated page per theme.
   stocks, with a dedicated `/index/<slug>` page.
 - **Two weighting methods** you can toggle live: **equal weight** and
   **market-cap weight**.
-- **Returns calculator** — "if you'd invested ₹X at the start of this range…".
-- **Paper trading** — a simple username/password login gives you ₹10,00,000 of
+- **Returns calculator** - "if you'd invested ₹X at the start of this range…".
+- **Paper trading** - a simple username/password login gives you ₹10,00,000 of
   virtual money to buy/sell index baskets; positions, cash and trade history
-  persist in **SQLite**. Positions are tracked separately per weighting method.
-- **Portfolio page** — net worth, cash, holdings, per-position P/L and a trade
+  persist in **PostgreSQL (Neon)**. Positions are tracked separately per
+  weighting method.
+- **Portfolio page** - net worth, cash, holdings, per-position P/L and a trade
   log.
 
 ## How it works
 
 - **Data source:** [Yahoo Finance](https://finance.yahoo.com) public endpoints
-  (`query1.finance.yahoo.com`) — free, no API key, delayed NSE quotes. Chosen
+  (`query1.finance.yahoo.com`) - free, no API key, delayed NSE quotes. Chosen
   over Upstox because Upstox requires per-user OAuth app registration + tokens,
   which isn't practical for a public, key-less deployment. Market caps come from
   the `v7/finance/quote` endpoint via Yahoo's cookie+crumb handshake (cached).
@@ -35,7 +36,7 @@ watch the whole group move together, with a dedicated page per theme.
   market-cap-) weighted average of current constituent prices, in ₹. Paper
   trades buy/sell rupee amounts at this price, always recomputed server-side.
 - **Auth:** username + PBKDF2-hashed password (Web Crypto, no external auth
-  lib), httpOnly cookie sessions stored in D1.
+  lib), httpOnly cookie sessions stored in Postgres.
 - **Ranges:** 1D, 1W, 1M, 3M, 6M, 1Y, 5Y (switched client-side, cached).
 
 ## Structure
@@ -44,12 +45,12 @@ watch the whole group move together, with a dedicated page per theme.
 lib/indices.ts             Index definitions (themes + constituent tickers)
 lib/yahoo.ts               Yahoo fetch + index computation (rebase, both weightings, spot price)
 lib/format.ts              Number/percent/price formatting
-lib/db.ts                  D1 accessor + row types (via getCloudflareContext)
-lib/auth.ts                Register/login/session (PBKDF2 + cookie)
-migrations/0001_init.sql   D1 schema (users, sessions, positions, trades)
-wrangler.jsonc             Cloudflare bindings (D1 + assets)
-open-next.config.ts        OpenNext Cloudflare adapter config
-lib/portfolio.ts           Buy/sell + position/trade queries (transactional)
+lib/prisma.ts              Singleton PrismaClient (Postgres/Neon)
+lib/db.ts                  STARTING_CASH constant
+lib/auth.ts                Register/login/session (PBKDF2 + cookie, Prisma)
+lib/portfolio.ts           Buy/sell + position/trade queries (Prisma interactive tx)
+prisma/schema.prisma       Prisma schema (users, sessions, positions, trades)
+prisma/migrations/         Prisma migration history (applied to Neon)
 app/actions.ts             Server actions: auth + trading
 app/page.tsx               Home grid of all indexes (static, ISR)
 app/index/[slug]/page.tsx  Dedicated per-index page (dashboard + constituents)
@@ -60,71 +61,50 @@ app/api/me                 Lightweight current-user endpoint (for the header)
 components/IndexDashboard.tsx  Owns range+weighting; renders chart, calculator, trade panel
 components/IndexChart.tsx      Presentational SVG area chart with hover
 components/ReturnsCalculator.tsx / TradePanel.tsx / AuthForm.tsx / Header.tsx / Sparkline.tsx
+scripts/db-migrate.mjs     Runs `prisma migrate deploy` (loads .env.local if present)
 ```
 
-Paper-trading data lives in **Cloudflare D1** (SQLite). Locally, miniflare keeps
-it under `.wrangler/state` (gitignored); run `npm run db:migrate:local` once to
-create the tables.
+Paper-trading data lives in **PostgreSQL on Neon**. Set `DATABASE_URL` in
+`.env.local` (see `.env.example`) and run `npm run db:migrate` once to create
+the tables.
 
 ## Run it locally
 
 ```bash
+cp .env.example .env.local   # then set DATABASE_URL to your Neon connection string
 npm install
-npm run db:migrate:local   # create the local D1 tables (once)
-npm run dev                # http://localhost:3000 (D1 provided by miniflare)
+npm run db:migrate           # create/update the Postgres tables
+npm run dev                  # http://localhost:3000
 ```
 
-## Deploy to Cloudflare (Workers + D1)
+## Deploy to Vercel + Neon
 
-This app runs on Cloudflare via the [OpenNext](https://opennext.js.org/cloudflare)
-adapter (`@opennextjs/cloudflare`), deployed with **wrangler**. Cloudflare's old
-`@cloudflare/next-on-pages` Pages adapter is deprecated in favour of this.
+This is a standard Next.js (App Router) app. It deploys through **Vercel's Git
+integration** - no Cloudflare/wrangler is involved.
 
-1. **Create the D1 database** and paste its id into `wrangler.jsonc`
-   (`d1_databases[0].database_id`):
-
-   ```bash
-   npx wrangler login
-   npx wrangler d1 create bharat-indexes-db
-   ```
-
-2. **Apply migrations** to the remote database:
-
-   ```bash
-   npm run db:migrate:remote
-   ```
-
-3. **Preview on the real Workers runtime** (optional but recommended):
-
-   ```bash
-   npm run preview          # builds with OpenNext + runs wrangler dev
-   ```
-
-4. **Deploy:**
-
-   ```bash
-   npm run deploy           # opennextjs-cloudflare build && … deploy
-   ```
-
-Bindings are declared in `wrangler.jsonc` (D1 `DB`, static `ASSETS`) and typed in
-`cloudflare-env.d.ts` (regenerate with `npm run cf-typegen`). `nodejs_compat` is
-enabled so the app can use Node-style APIs on Workers.
+1. **Create a Neon project** and copy its pooled connection string
+   (`postgres://…neon.tech/…?sslmode=require`).
+2. **Import the repo into Vercel** (dashboard → Add New → Project). Vercel will
+   run `npm run build` automatically on every push to `main`.
+3. **Add the `DATABASE_URL` env var** in Vercel (Project → Settings → Environment
+   Variables) for Production, Preview and Development.
+4. **Apply migrations** once (locally or via the included GitHub Action, which
+   runs `npm run db:migrate` with `DATABASE_URL` as a repo secret on push).
 
 ### What lives where
 
-- **D1 stores only basic state** — users, sessions, positions (units + cost
-  basis) and the trade log. **No prices or index values are stored.**
+- **Postgres stores only basic state** - users, sessions, positions (units +
+  cost basis) and the trade log. **No prices or index values are stored.**
 - **All valuation is computed live** from the latest index value fetched from
   Yahoo at request time (current position value, P/L, net worth, the returns
   calculator). A trade just computes the live spot price server-side and records
   units + cost.
-- Password hashing uses **Web Crypto PBKDF2** (portable to the Workers runtime —
-  no native modules), with httpOnly cookie sessions.
+- Password hashing uses **Web Crypto PBKDF2**, with httpOnly cookie sessions.
 
 ## Add a new index
 
-Append an entry to `INDICES` in `lib/indices.ts` — give it a `slug`, `name`,
-`emoji`, `gradient`, `accent` and a list of `{ symbol, name }` constituents
+Append an entry to `INDICES` in `lib/indices.ts` - give it a `slug`, `name`,
+`gradient`, `accent` and a list of `{ symbol, name }` constituents
 (Yahoo symbols, e.g. `RELIANCE.NS`). The home grid, the `/index/<slug>` page and
 the API route pick it up automatically.
 
@@ -136,5 +116,5 @@ small retry to smooth over rate-limiting on parallel bursts.
 
 ---
 
-Data via Yahoo Finance (NSE, delayed). For information only — **not investment
+Data via Yahoo Finance (NSE, delayed). For information only - **not investment
 advice**.

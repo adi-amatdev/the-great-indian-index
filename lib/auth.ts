@@ -1,12 +1,13 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { getDB, STARTING_CASH, UserRow } from "./db";
+import { prisma } from "./prisma";
+import { STARTING_CASH } from "./db";
 
 const COOKIE = "bharat_sid";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 const PBKDF2_ITERS = 100_000;
 
-// ---- Password hashing (Web Crypto PBKDF2 — portable to the CF runtime) ------
+// ---- Password hashing (Web Crypto PBKDF2) -----------------------------------
 
 function toHex(buf: ArrayBuffer | Uint8Array): string {
   const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
@@ -49,7 +50,6 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
   const [saltHex, hashHex] = stored.split(":");
   if (!saltHex || !hashHex) return false;
   const candidate = await derive(password, fromHex(saltHex));
-  // Constant-time compare over equal-length hex strings.
   if (candidate.length !== hashHex.length) return false;
   let diff = 0;
   for (let i = 0; i < candidate.length; i++)
@@ -63,32 +63,30 @@ async function setSessionCookie(token: string) {
   const jar = await cookies();
   jar.set(COOKIE, token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
 }
 
-async function createSession(userId: number): Promise<string> {
+async function createSession(userId: bigint): Promise<string> {
   const token = toHex(crypto.getRandomValues(new Uint8Array(32)));
-  await getDB()
-    .prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)")
-    .bind(token, userId, Date.now())
-    .run();
+  await prisma.session.create({
+    data: { token, userId, createdAt: BigInt(Date.now()) },
+  });
   return token;
 }
 
-export async function getCurrentUser(): Promise<UserRow | null> {
+export async function getCurrentUser() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
-  return await getDB()
-    .prepare(
-      `SELECT u.* FROM users u JOIN sessions s ON s.user_id = u.id WHERE s.token = ?`,
-    )
-    .bind(token)
-    .first<UserRow>();
+  const session = await prisma.session.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+  return session?.user ?? null;
 }
 
 // ---- Register / login / logout ---------------------------------------------
@@ -107,21 +105,19 @@ export async function registerUser(
   if (password.length < 6)
     return { ok: false, error: "Password must be at least 6 characters." };
 
-  const db = getDB();
-  const exists = await db
-    .prepare("SELECT 1 FROM users WHERE username = ?")
-    .bind(username)
-    .first();
-  if (exists) return { ok: false, error: "That username is taken." };
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (existing) return { ok: false, error: "That username is taken." };
 
-  const res = await db
-    .prepare(
-      "INSERT INTO users (username, pass_hash, cash, created_at) VALUES (?, ?, ?, ?)",
-    )
-    .bind(username, await hashPassword(password), STARTING_CASH, Date.now())
-    .run();
+  const user = await prisma.user.create({
+    data: {
+      username,
+      passHash: await hashPassword(password),
+      cash: STARTING_CASH,
+      createdAt: BigInt(Date.now()),
+    },
+  });
 
-  await setSessionCookie(await createSession(Number(res.meta.last_row_id)));
+  await setSessionCookie(await createSession(user.id));
   return { ok: true };
 }
 
@@ -130,11 +126,8 @@ export async function loginUser(
   password: string,
 ): Promise<AuthResult> {
   username = username.trim().toLowerCase();
-  const user = await getDB()
-    .prepare("SELECT * FROM users WHERE username = ?")
-    .bind(username)
-    .first<UserRow>();
-  if (!user || !(await verifyPassword(password, user.pass_hash)))
+  const user = await prisma.user.findUnique({ where: { username } });
+  if (!user || !(await verifyPassword(password, user.passHash)))
     return { ok: false, error: "Invalid username or password." };
 
   await setSessionCookie(await createSession(user.id));
@@ -144,7 +137,6 @@ export async function loginUser(
 export async function logoutUser() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
-  if (token)
-    await getDB().prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+  if (token) await prisma.session.deleteMany({ where: { token } });
   jar.delete(COOKIE);
 }

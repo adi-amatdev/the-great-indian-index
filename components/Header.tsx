@@ -20,14 +20,13 @@ export default function Header() {
     return () => {
       cancelled = true;
     };
-  }, [pathname]); // re-check auth on navigation
+  }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0a0a12]/80 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-surface bg-background/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-3">
         <Link href="/" className="flex items-center gap-2 font-black tracking-tight">
-          <span className="text-lg">🇮🇳</span>
-          <span className="bg-gradient-to-r from-orange-300 via-white to-green-300 bg-clip-text text-transparent">
+          <span className="text-foreground">
             Bharat Indexes
           </span>
         </Link>
@@ -35,12 +34,12 @@ export default function Header() {
         <nav className="flex items-center gap-2 text-sm">
           {!loaded ? null : me ? (
             <>
-              <span className="hidden text-white/50 sm:inline">
-                ₹{me.cash.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+              <span className="hidden text-muted sm:inline">
+                &#x20B9;{me.cash.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
               </span>
               <Link
                 href="/portfolio"
-                className="rounded-full bg-white/10 px-3 py-1.5 font-semibold text-white/80 transition hover:bg-white/20"
+                className="rounded-full bg-accent px-3 py-1.5 font-semibold text-white transition hover:bg-accent-hover"
               >
                 @{me.username}
               </Link>
@@ -48,7 +47,7 @@ export default function Header() {
           ) : (
             <Link
               href="/login"
-              className="rounded-full bg-white px-3 py-1.5 font-semibold text-black transition hover:bg-white/90"
+              className="rounded-full bg-accent px-3 py-1.5 font-semibold text-white transition hover:bg-accent-hover"
             >
               Log in
             </Link>

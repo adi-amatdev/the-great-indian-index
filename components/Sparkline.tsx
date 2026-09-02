@@ -14,7 +14,7 @@ export default function Sparkline({
   if (points.length < 2) {
     return (
       <div
-        className="flex items-center justify-center text-xs text-white/50"
+        className="flex items-center justify-center text-xs text-muted-light"
         style={{ width, height }}
       >
         no data
@@ -52,7 +52,7 @@ export default function Sparkline({
     >
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.30" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>

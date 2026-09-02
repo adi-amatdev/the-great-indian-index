@@ -5,12 +5,13 @@ import { getAllPositions, getTrades } from "@/lib/portfolio";
 import { getIndex } from "@/lib/indices";
 import { getSpotPrice, Weighting } from "@/lib/yahoo";
 import { logoutAction } from "@/app/actions";
+import IndexIcon from "@/components/IndexIcon";
 
-export const metadata = { title: "Portfolio — Bharat Indexes" };
+export const metadata = { title: "Portfolio - Bharat Indexes" };
 export const dynamic = "force-dynamic";
 
 function inr(v: number, dp = 0) {
-  return `₹${v.toLocaleString("en-IN", { maximumFractionDigits: dp, minimumFractionDigits: dp })}`;
+  return `\u20B9${v.toLocaleString("en-IN", { maximumFractionDigits: dp, minimumFractionDigits: dp })}`;
 }
 
 export default async function PortfolioPage() {
@@ -22,7 +23,6 @@ export default async function PortfolioPage() {
     getTrades(user.id, 40),
   ]);
 
-  // Price every held position (parallel).
   const priced = await Promise.all(
     positions.map(async (p) => {
       const def = getIndex(p.slug);
@@ -44,13 +44,13 @@ export default async function PortfolioPage() {
     <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">
+          <h1 className="text-3xl font-black tracking-tight text-foreground">
             @{user.username}&apos;s portfolio
           </h1>
-          <p className="text-sm text-white/50">Paper trading account</p>
+          <p className="text-sm text-muted">Paper trading account</p>
         </div>
         <form action={logoutAction}>
-          <button className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:bg-white/10">
+          <button className="rounded-full border border-surface bg-surface/50 px-4 py-2 text-sm text-muted transition hover:bg-surface-hover hover:text-foreground">
             Log out
           </button>
         </form>
@@ -70,19 +70,19 @@ export default async function PortfolioPage() {
 
       {/* Holdings */}
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-bold">Holdings</h2>
+        <h2 className="mb-3 text-lg font-bold text-foreground">Holdings</h2>
         {priced.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center text-white/50">
+          <div className="rounded-2xl border border-surface bg-surface/30 p-8 text-center text-muted">
             No positions yet.{" "}
-            <Link href="/" className="text-white underline">
+            <Link href="/" className="text-accent font-medium underline">
               Browse indexes
             </Link>{" "}
             and buy your first basket.
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
+          <div className="overflow-x-auto rounded-2xl border border-surface">
             <table className="w-full text-sm">
-              <thead className="bg-white/5 text-left text-white/50">
+              <thead className="bg-surface/60 text-left text-muted">
                 <tr>
                   <th className="px-4 py-3 font-medium">Index</th>
                   <th className="px-4 py-3 font-medium">Weighting</th>
@@ -98,30 +98,31 @@ export default async function PortfolioPage() {
                   return (
                     <tr
                       key={`${p.slug}-${p.weighting}`}
-                      className="border-t border-white/5 hover:bg-white/[0.03]"
+                      className="border-t border-surface hover:bg-surface/30"
                     >
-                      <td className="px-4 py-3 font-medium">
+                      <td className="px-4 py-3 font-medium text-foreground">
                         <Link
                           href={`/index/${p.slug}`}
-                          className="hover:underline"
+                          className="inline-flex items-center gap-1.5 hover:underline"
                         >
-                          {def?.emoji} {def?.name ?? p.slug}
+                          {def && <IndexIcon slug={def.slug} className="w-5 h-5 text-accent" />}
+                          {def?.name ?? p.slug}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-white/60">
+                      <td className="px-4 py-3 text-muted">
                         {p.weighting === "mcap" ? "Market cap" : "Equal wt"}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono">
+                      <td className="px-4 py-3 text-right font-mono text-foreground">
                         {p.units.toFixed(4)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono">
+                      <td className="px-4 py-3 text-right font-mono text-foreground">
                         {inr(p.cost)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono">
+                      <td className="px-4 py-3 text-right font-mono text-foreground">
                         {inr(value)}
                       </td>
                       <td
-                        className={`px-4 py-3 text-right font-mono font-semibold ${pl >= 0 ? "text-green-300" : "text-red-300"}`}
+                        className={`px-4 py-3 text-right font-mono font-semibold ${pl >= 0 ? "text-up" : "text-down"}`}
                       >
                         {pl >= 0 ? "+" : ""}
                         {inr(pl)} ({plPct >= 0 ? "+" : ""}
@@ -139,10 +140,10 @@ export default async function PortfolioPage() {
       {/* Trade history */}
       {trades.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 text-lg font-bold">Recent trades</h2>
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
+          <h2 className="mb-3 text-lg font-bold text-foreground">Recent trades</h2>
+          <div className="overflow-x-auto rounded-2xl border border-surface">
             <table className="w-full text-sm">
-              <thead className="bg-white/5 text-left text-white/50">
+              <thead className="bg-surface/60 text-left text-muted">
                 <tr>
                   <th className="px-4 py-3 font-medium">When</th>
                   <th className="px-4 py-3 font-medium">Index</th>
@@ -156,33 +157,36 @@ export default async function PortfolioPage() {
                 {trades.map((t) => {
                   const def = getIndex(t.slug);
                   return (
-                    <tr key={t.id} className="border-t border-white/5">
-                      <td className="px-4 py-3 text-white/60">
-                        {new Date(t.ts).toLocaleString("en-IN", {
+                    <tr key={Number(t.id)} className="border-t border-surface">
+                      <td className="px-4 py-3 text-muted">
+                        {new Date(Number(t.ts)).toLocaleString("en-IN", {
                           day: "2-digit",
                           month: "short",
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
                       </td>
-                      <td className="px-4 py-3">
-                        {def?.emoji} {def?.name ?? t.slug}
-                        <span className="ml-1 text-xs text-white/40">
-                          {t.weighting === "mcap" ? "· mcap" : "· eq"}
+                      <td className="px-4 py-3 text-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          {def && <IndexIcon slug={def.slug} className="w-5 h-5 text-accent" />}
+                          {def?.name ?? t.slug}
+                        </span>
+                        <span className="ml-1 text-xs text-muted-light">
+                          {t.weighting === "mcap" ? "\u00B7 mcap" : "\u00B7 eq"}
                         </span>
                       </td>
                       <td
-                        className={`px-4 py-3 font-semibold uppercase ${t.side === "buy" ? "text-green-300" : "text-red-300"}`}
+                        className={`px-4 py-3 font-semibold uppercase ${t.side === "buy" ? "text-up" : "text-down"}`}
                       >
                         {t.side}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono">
+                      <td className="px-4 py-3 text-right font-mono text-foreground">
                         {t.units.toFixed(4)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono">
+                      <td className="px-4 py-3 text-right font-mono text-foreground">
                         {inr(t.price, 2)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono">
+                      <td className="px-4 py-3 text-right font-mono text-foreground">
                         {inr(t.amount, 2)}
                       </td>
                     </tr>
@@ -194,8 +198,8 @@ export default async function PortfolioPage() {
         </section>
       )}
 
-      <footer className="mt-12 text-center text-xs text-white/35">
-        Paper money only · started with {inr(startWorth)} · not investment advice.
+      <footer className="mt-12 text-center text-xs text-muted-light">
+        Paper money only &middot; started with {inr(startWorth)} &middot; not investment advice.
       </footer>
     </main>
   );
@@ -211,15 +215,15 @@ function Stat({
   tone?: "up" | "down";
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="text-xs text-white/40">{label}</div>
+    <div className="rounded-2xl border border-surface bg-surface/30 p-4">
+      <div className="text-xs text-muted">{label}</div>
       <div
         className={`mt-1 font-mono text-xl font-bold ${
           tone === "up"
-            ? "text-green-300"
+            ? "text-up"
             : tone === "down"
-              ? "text-red-300"
-              : ""
+              ? "text-down"
+              : "text-foreground"
         }`}
       >
         {value}

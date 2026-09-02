@@ -1,10 +1,8 @@
 import type { NextConfig } from "next";
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  // Prisma resolves the Postgres/Neon connection at runtime in server code.
+  serverExternalPackages: ["@prisma/client", "@prisma/engines"],
+};
 
 export default nextConfig;
-
-// Makes getCloudflareContext() (and the D1 binding) work during `next dev`
-// by wiring up a local miniflare-backed environment.
-initOpenNextCloudflareForDev();

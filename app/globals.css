@@ -1,13 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a12;
-  --foreground: #f5f5f7;
+  --background: #f1ece6;
+  --foreground: #2E2E2E;
+  --surface: #DDD5CD;
+  --surface-hover: #d1c8be;
+  --accent: #7D4047;
+  --accent-hover: #6a353b;
+  --muted: #8a7e75;
+  --muted-light: #a39890;
+  --up: #588157;
+  --up-bg: #58815718;
+  --down: #a63d40;
+  --down-bg: #a63d4018;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-muted: var(--muted);
+  --color-muted-light: var(--muted-light);
+  --color-up: var(--up);
+  --color-up-bg: var(--up-bg);
+  --color-down: var(--down);
+  --color-down-bg: var(--down-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,14 +36,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
-  background-image:
-    radial-gradient(60rem 40rem at 10% -10%, rgba(99, 102, 241, 0.18), transparent),
-    radial-gradient(50rem 40rem at 100% 0%, rgba(16, 185, 129, 0.16), transparent),
-    radial-gradient(40rem 30rem at 50% 120%, rgba(236, 72, 153, 0.12), transparent);
-  background-attachment: fixed;
 }
 
 @keyframes floaty {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-floaty {
+    animation: none !important;
+  }
 }

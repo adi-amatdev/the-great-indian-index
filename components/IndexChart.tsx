@@ -20,7 +20,6 @@ function fmtDate(t: number, range: RangeKey) {
   });
 }
 
-/** Presentational SVG area chart with a hover crosshair. */
 export default function IndexChart({
   points,
   range,
@@ -32,7 +31,7 @@ export default function IndexChart({
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const up = (changePct ?? 0) >= 0;
-  const lineColor = up ? "#22c55e" : "#ef4444";
+  const lineColor = up ? "#588157" : "#a63d40";
 
   const geom = useMemo(() => {
     const W = 900;
@@ -67,7 +66,7 @@ export default function IndexChart({
   const hovered = hover != null ? points[hover] : null;
 
   return (
-    <div className="relative rounded-2xl border border-white/10 bg-black/20 p-2">
+    <div className="relative rounded-2xl border border-surface bg-background p-2">
       {geom ? (
         <svg
           viewBox={`0 0 ${geom.W} ${geom.H}`}
@@ -77,7 +76,7 @@ export default function IndexChart({
         >
           <defs>
             <linearGradient id="chartfill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={lineColor} stopOpacity="0.28" />
+              <stop offset="0%" stopColor={lineColor} stopOpacity="0.20" />
               <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
             </linearGradient>
           </defs>
@@ -89,8 +88,8 @@ export default function IndexChart({
               x2={geom.W - geom.pad.r}
               y1={geom.pad.t + f * (geom.H - geom.pad.t - geom.pad.b)}
               y2={geom.pad.t + f * (geom.H - geom.pad.t - geom.pad.b)}
-              stroke="white"
-              strokeOpacity="0.06"
+              stroke="#2E2E2E"
+              strokeOpacity="0.08"
               strokeWidth="1"
             />
           ))}
@@ -112,8 +111,8 @@ export default function IndexChart({
                 x2={geom.x(hover)}
                 y1={geom.pad.t}
                 y2={geom.H - geom.pad.b}
-                stroke="white"
-                strokeOpacity="0.3"
+                stroke="#2E2E2E"
+                strokeOpacity="0.2"
                 strokeWidth="1"
               />
               <circle
@@ -121,24 +120,24 @@ export default function IndexChart({
                 cy={geom.y(hovered.v)}
                 r="4.5"
                 fill={lineColor}
-                stroke="white"
+                stroke="#f1ece6"
                 strokeWidth="2"
               />
             </>
           )}
         </svg>
       ) : (
-        <div className="flex h-[280px] items-center justify-center text-white/50">
+        <div className="flex h-[280px] items-center justify-center text-muted">
           No data available for this range.
         </div>
       )}
 
       {hovered && (
-        <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-black/70 px-3 py-1.5 text-xs backdrop-blur">
-          <div className="font-mono text-sm font-bold text-white">
+        <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-surface bg-background/90 px-3 py-1.5 text-xs backdrop-blur">
+          <div className="font-mono text-sm font-bold text-foreground">
             {hovered.v.toFixed(2)}
           </div>
-          <div className="text-white/60">{fmtDate(hovered.t, range)}</div>
+          <div className="text-muted">{fmtDate(hovered.t, range)}</div>
         </div>
       )}
     </div>

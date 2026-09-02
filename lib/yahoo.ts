@@ -16,7 +16,7 @@ export const RANGES: { key: RangeKey; range: string; interval: string }[] = [
 ];
 
 export function resolveRange(key?: string) {
-  return RANGES.find((r) => r.key === key) ?? RANGES[2]; // default 1M
+  return RANGES.find((r) => r.key === key) ?? RANGES[0]; // default 1D
 }
 
 export function resolveWeighting(w?: string | null): Weighting {
@@ -43,7 +43,6 @@ export type ConstituentQuote = {
 export type IndexData = {
   slug: string;
   name: string;
-  emoji: string;
   weighting: Weighting;
   points: SeriesPoint[]; // index value rebased to 100 at range start
   level: number | null; // latest index level (rebased)
@@ -124,7 +123,7 @@ async function fetchChart(
   const url =
     `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
     `?range=${range}&interval=${interval}&includePrePost=false`;
-  // Retry a couple of times — Yahoo rate-limits bursts of parallel requests.
+  // Retry a couple of times. Yahoo rate-limits bursts of parallel requests.
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const res = await fetch(url, {
@@ -305,7 +304,6 @@ export async function getIndexData(
   return {
     slug: def.slug,
     name: def.name,
-    emoji: def.emoji,
     weighting,
     points,
     level,
@@ -320,7 +318,7 @@ export async function getIndexData(
 }
 
 /**
- * Lightweight, range-independent spot price for a whole index — used by the
+ * Lightweight, range-independent spot price for a whole index, used by the
  * paper-trading server actions so the price is computed server-side, never
  * trusted from the client. Uses the 1D chart for current prices + quotes for
  * market caps (mcap weighting only).

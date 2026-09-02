@@ -1,0 +1,61 @@
+// Prisma schema for Bharat Indexes. Backed by PostgreSQL on Neon.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        BigInt    @id @default(autoincrement())
+  username  String    @unique
+  passHash  String
+  cash      Float
+  createdAt BigInt
+  sessions  Session[]
+  positions Position[]
+  trades    Trade[]
+
+  @@map("users")
+}
+
+model Session {
+  token     String @id
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    BigInt
+  createdAt BigInt
+
+  @@map("sessions")
+  @@index([userId])
+}
+
+model Position {
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    BigInt
+  slug      String
+  weighting String
+  units     Float  @default(0)
+  cost      Float  @default(0)
+
+  @@id([userId, slug, weighting])
+  @@map("positions")
+}
+
+model Trade {
+  id        BigInt @id @default(autoincrement())
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    BigInt
+  slug      String
+  weighting String
+  side      String
+  units     Float
+  price     Float
+  amount    Float
+  ts        BigInt
+
+  @@map("trades")
+  @@index([userId, ts(sort: Desc)])
+}

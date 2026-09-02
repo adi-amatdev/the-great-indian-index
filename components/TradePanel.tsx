@@ -7,7 +7,7 @@ import type { Weighting } from "@/lib/yahoo";
 import { buyIndex, sellIndex } from "@/app/actions";
 
 function inr(v: number, dp = 2) {
-  return `₹${v.toLocaleString("en-IN", { maximumFractionDigits: dp, minimumFractionDigits: dp })}`;
+  return `\u20B9${v.toLocaleString("en-IN", { maximumFractionDigits: dp, minimumFractionDigits: dp })}`;
 }
 
 export default function TradePanel({
@@ -38,18 +38,18 @@ export default function TradePanel({
 
   if (!loggedIn) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-white/50">
+      <div className="rounded-2xl border border-surface bg-surface/40 p-5">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted">
           Paper trading
         </h3>
-        <p className="mt-2 text-sm text-white/60">
+        <p className="mt-2 text-sm text-muted">
           Practise investing with{" "}
-          <span className="font-semibold text-white">₹10,00,000</span> of virtual
-          money — no real cash, no risk.
+          <span className="font-semibold text-foreground">&#x20B9;10,00,000</span> of virtual
+          money, no real cash, no risk.
         </p>
         <Link
           href={`/login?next=/index/${slug}`}
-          className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 font-semibold text-black transition hover:bg-white/90"
+          className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-accent px-4 py-2.5 font-semibold text-white transition hover:bg-accent-hover"
         >
           Log in to trade
         </Link>
@@ -79,45 +79,45 @@ export default function TradePanel({
   const canSell = spot != null && units * spot >= amount - 1e-6;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+    <div className="rounded-2xl border border-surface bg-surface/40 p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-white/50">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-muted">
           Paper trading
         </h3>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] uppercase text-white/60">
+        <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] uppercase text-muted">
           {weighting === "mcap" ? "Market cap" : "Equal wt"}
         </span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-lg bg-black/30 px-3 py-2">
-          <div className="text-white/40">Cash</div>
-          <div className="font-mono font-semibold">
-            {cash != null ? inr(cash, 0) : "—"}
+        <div className="rounded-lg bg-background px-3 py-2">
+          <div className="text-muted">Cash</div>
+          <div className="font-mono font-semibold text-foreground">
+            {cash != null ? inr(cash, 0) : "-"}
           </div>
         </div>
-        <div className="rounded-lg bg-black/30 px-3 py-2">
-          <div className="text-white/40">Unit price</div>
-          <div className="font-mono font-semibold">
-            {spot != null ? inr(spot) : "—"}
+        <div className="rounded-lg bg-background px-3 py-2">
+          <div className="text-muted">Unit price</div>
+          <div className="font-mono font-semibold text-foreground">
+            {spot != null ? inr(spot) : "-"}
           </div>
         </div>
       </div>
 
       {units > 0.0000001 && (
-        <div className="mt-2 rounded-lg bg-black/30 px-3 py-2 text-sm">
+        <div className="mt-2 rounded-lg bg-background px-3 py-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-white/40">Your position</span>
-            <span className="font-mono">{units.toFixed(4)} units</span>
+            <span className="text-muted">Your position</span>
+            <span className="font-mono text-foreground">{units.toFixed(4)} units</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/40">Value</span>
-            <span className="font-mono font-semibold">{inr(value, 0)}</span>
+            <span className="text-muted">Value</span>
+            <span className="font-mono font-semibold text-foreground">{inr(value, 0)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/40">P/L</span>
+            <span className="text-muted">P/L</span>
             <span
-              className={`font-mono font-semibold ${pl >= 0 ? "text-green-300" : "text-red-300"}`}
+              className={`font-mono font-semibold ${pl >= 0 ? "text-up" : "text-down"}`}
             >
               {pl >= 0 ? "+" : ""}
               {inr(pl, 0)} ({plPct >= 0 ? "+" : ""}
@@ -128,13 +128,13 @@ export default function TradePanel({
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-white/60">₹</span>
+        <span className="text-muted">&#x20B9;</span>
         <input
           type="number"
           min={0}
           value={amount}
           onChange={(e) => setAmount(Math.max(0, Number(e.target.value)))}
-          className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 font-mono outline-none focus:border-white/40"
+          className="w-full rounded-lg border border-surface bg-background px-3 py-2 font-mono text-foreground outline-none focus:border-accent"
         />
       </div>
 
@@ -142,28 +142,28 @@ export default function TradePanel({
         <button
           disabled={pending || spot == null || amount <= 0}
           onClick={() => trade("buy")}
-          className="rounded-xl bg-green-500 px-4 py-2.5 font-semibold text-black transition hover:bg-green-400 disabled:opacity-40"
+          className="rounded-xl bg-up px-4 py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
         >
-          {pending ? "…" : "Buy"}
+          {pending ? "\u2026" : "Buy"}
         </button>
         <button
           disabled={pending || spot == null || amount <= 0 || !canSell}
           onClick={() => trade("sell")}
-          className="rounded-xl bg-red-500 px-4 py-2.5 font-semibold text-black transition hover:bg-red-400 disabled:opacity-40"
+          className="rounded-xl bg-down px-4 py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
           title={!canSell ? "You don't hold enough to sell this amount" : ""}
         >
-          {pending ? "…" : "Sell ₹ worth"}
+          {pending ? "\u2026" : "Sell \u20B9 worth"}
         </button>
       </div>
 
       {msg && (
         <p
-          className={`mt-3 text-center text-sm ${msg.ok ? "text-green-300" : "text-red-300"}`}
+          className={`mt-3 text-center text-sm ${msg.ok ? "text-up" : "text-down"}`}
         >
           {msg.text}
         </p>
       )}
-      <p className="mt-2 text-center text-[11px] text-white/35">
+      <p className="mt-2 text-center text-[11px] text-muted-light">
         Buy/sell in rupee amounts at the live basket unit price. Positions are
         tracked separately per weighting method.
       </p>

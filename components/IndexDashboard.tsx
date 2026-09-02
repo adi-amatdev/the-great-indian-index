@@ -63,28 +63,28 @@ export default function IndexDashboard({
       {/* Level + change */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="font-mono text-4xl font-black">
+          <div className="font-mono text-4xl font-black text-foreground">
             {fmtLevel(data.level)}
           </div>
           <div
             className={`mt-1 inline-flex rounded-full px-3 py-1 text-sm font-bold ${
-              up ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
+              up ? "bg-up-bg text-up" : "bg-down-bg text-down"
             }`}
           >
-            {up ? "▲" : "▼"} {fmtPct(data.changePct)} · {range}
+            {up ? "\u25B2" : "\u25BC"} {fmtPct(data.changePct)} &middot; {range}
           </div>
         </div>
 
         {/* Weighting toggle */}
-        <div className="inline-flex rounded-full border border-white/15 bg-black/30 p-1 text-sm">
+        <div className="inline-flex rounded-full border border-surface bg-background p-1 text-sm">
           {(["equal", "mcap"] as Weighting[]).map((w) => (
             <button
               key={w}
               onClick={() => setWeighting(w)}
               className={`rounded-full px-3 py-1 font-semibold transition ${
                 weighting === w
-                  ? "bg-white text-black"
-                  : "text-white/60 hover:text-white"
+                  ? "bg-accent text-white"
+                  : "text-muted hover:text-foreground"
               }`}
             >
               {w === "equal" ? "Equal weight" : "Market cap"}
@@ -101,15 +101,15 @@ export default function IndexDashboard({
             onClick={() => setRange(k)}
             className={`rounded-full px-3 py-1 text-sm font-semibold transition ${
               range === k
-                ? "bg-white text-black"
-                : "bg-white/10 text-white/70 hover:bg-white/20"
+                ? "bg-accent text-white"
+                : "bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
             }`}
           >
             {k}
           </button>
         ))}
         {loading && (
-          <span className="ml-2 self-center text-xs text-white/50">loading…</span>
+          <span className="ml-2 self-center text-xs text-muted">loading\u2026</span>
         )}
       </div>
 
@@ -118,9 +118,9 @@ export default function IndexDashboard({
         range={range}
         changePct={data.changePct}
       />
-      <p className="mt-2 text-center text-xs text-white/40">
-        {weighting === "mcap" ? "Market-cap weighted" : "Equal weighted"} ·
-        rebased to 100 at range start · {data.ok}/{data.total} constituents live
+      <p className="mt-2 text-center text-xs text-muted">
+        {weighting === "mcap" ? "Market-cap weighted" : "Equal weighted"} &middot;
+        rebased to 100 at range start &middot; {data.ok}/{data.total} constituents live
       </p>
 
       {/* Calculator + trade */}

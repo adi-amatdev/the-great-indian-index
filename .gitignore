@@ -32,22 +32,21 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.local.example
 
 # vercel
 .vercel
+
+# agent config
+.opencode/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-# app data (sqlite)
+# app data
 /data
 *.db
 *.db-shm
 *.db-wal
-
-# cloudflare / opennext
-/.open-next
-/.wrangler
-.dev.vars
-cloudflare-env.d.ts.bak

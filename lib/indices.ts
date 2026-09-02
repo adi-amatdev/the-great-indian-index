@@ -13,7 +13,6 @@ export type Constituent = {
 export type IndexDef = {
   slug: string;
   name: string;
-  emoji: string;
   tagline: string;
   blurb: string;
   /** Tailwind gradient stops used for the card + hero */
@@ -27,10 +26,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "adani",
     name: "Adani Index",
-    emoji: "🏗️",
     tagline: "Ports, power & the infra empire",
     blurb:
-      "The Adani conglomerate — from ports and airports to green energy, power transmission and cement. A single line for one of India's most-watched industrial groups.",
+      "The Adani conglomerate, from ports and airports to green energy, power transmission and cement. A single line for one of India's most-watched industrial groups.",
     gradient: "from-emerald-500 via-teal-500 to-cyan-600",
     accent: "#10b981",
     constituents: [
@@ -47,10 +45,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "tata",
     name: "Tata Index",
-    emoji: "🧿",
     tagline: "The salt-to-software house",
     blurb:
-      "India's most trusted conglomerate — software, cars, steel, power, consumer goods, jewellery and hotels. The Tata group in one tracker.",
+      "India's most trusted conglomerate, software, cars, steel, power, consumer goods, jewellery and hotels. The Tata group in one tracker.",
     gradient: "from-indigo-500 via-blue-500 to-sky-600",
     accent: "#3b82f6",
     constituents: [
@@ -71,10 +68,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "ev",
     name: "EV & Mobility Index",
-    emoji: "⚡",
     tagline: "India's electric-vehicle supply chain",
     blurb:
-      "The companies electrifying Indian roads — carmakers, e-bus builders, battery makers and the components powering the EV transition.",
+      "The companies electrifying Indian roads, carmakers, e-bus builders, battery makers and the components powering the EV transition.",
     gradient: "from-lime-400 via-green-500 to-emerald-600",
     accent: "#22c55e",
     constituents: [
@@ -92,10 +88,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "agri",
     name: "Agri Index",
-    emoji: "🌾",
     tagline: "Feeding the world's most populous nation",
     blurb:
-      "Fertilisers, crop protection, seeds and agro-chemicals — the businesses behind India's farms and one of its biggest employment engines.",
+      "Fertilisers, crop protection, seeds and agro-chemicals, the businesses behind India's farms and one of its biggest employment engines.",
     gradient: "from-amber-400 via-yellow-500 to-lime-600",
     accent: "#eab308",
     constituents: [
@@ -113,10 +108,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "copper",
     name: "Copper & Metals Index",
-    emoji: "⛏️",
     tagline: "The metals that build everything",
     blurb:
-      "Copper, aluminium, zinc and steel — the base-metal producers whose fortunes swing with global commodity cycles and India's build-out.",
+      "Copper, aluminium, zinc and steel, the base-metal producers whose fortunes swing with global commodity cycles and India's build-out.",
     gradient: "from-orange-500 via-amber-600 to-yellow-700",
     accent: "#f97316",
     constituents: [
@@ -133,10 +127,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "ethanol",
     name: "Ethanol & Sugar Index",
-    emoji: "🛢️",
     tagline: "Blending fuel from the fields",
     blurb:
-      "Sugar mills and distilleries riding India's ethanol-blending push — a bet on cleaner fuel, cane economics and government blending targets.",
+      "Sugar mills and distilleries riding India's ethanol-blending push, a bet on cleaner fuel, cane economics and government blending targets.",
     gradient: "from-rose-400 via-pink-500 to-fuchsia-600",
     accent: "#ec4899",
     constituents: [
@@ -153,10 +146,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "defence",
     name: "Defence Index",
-    emoji: "🛡️",
     tagline: "Atmanirbhar in arms",
     blurb:
-      "India's defence manufacturing story — shipyards, aircraft, missiles, electronics and explosives, powered by indigenisation and a rising order book.",
+      "India's defence manufacturing story, shipyards, aircraft, missiles, electronics and explosives, powered by indigenisation and a rising order book.",
     gradient: "from-slate-500 via-gray-600 to-zinc-700",
     accent: "#64748b",
     constituents: [
@@ -173,10 +165,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "railways",
     name: "Railways Index",
-    emoji: "🚆",
     tagline: "The backbone on rails",
     blurb:
-      "Coaches, wagons, financing, ticketing and construction — the listed players riding India's massive railway modernisation and capex cycle.",
+      "Coaches, wagons, financing, ticketing and construction, the listed players riding India's massive railway modernisation and capex cycle.",
     gradient: "from-cyan-500 via-sky-600 to-blue-700",
     accent: "#0ea5e9",
     constituents: [
@@ -193,10 +184,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "it",
     name: "IT Services Index",
-    emoji: "💻",
     tagline: "The world's back office",
     blurb:
-      "India's software export machine — the large-caps and mid-caps that write code, run systems and consult for clients across the globe.",
+      "India's software export machine, the large-caps and mid-caps that write code, run systems and consult for clients across the globe.",
     gradient: "from-violet-500 via-purple-600 to-indigo-700",
     accent: "#8b5cf6",
     constituents: [
@@ -214,10 +204,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "pharma",
     name: "Pharma Index",
-    emoji: "💊",
     tagline: "Pharmacy to the world",
     blurb:
-      "India's drug makers — generics giants and specialty players supplying medicines across the US, Europe and emerging markets.",
+      "India's drug makers, generics giants and specialty players supplying medicines across the US, Europe and emerging markets.",
     gradient: "from-teal-400 via-emerald-500 to-green-600",
     accent: "#14b8a6",
     constituents: [
@@ -234,10 +223,9 @@ export const INDICES: IndexDef[] = [
   {
     slug: "banks",
     name: "Banks Index",
-    emoji: "🏦",
     tagline: "Where the money moves",
     blurb:
-      "India's biggest private and public-sector lenders — the engines of credit growth for the fastest-growing major economy.",
+      "India's biggest private and public-sector lenders, the engines of credit growth for the fastest-growing major economy.",
     gradient: "from-red-500 via-rose-600 to-pink-700",
     accent: "#ef4444",
     constituents: [

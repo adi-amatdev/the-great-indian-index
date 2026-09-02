@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bharat Indexes — custom Indian market trackers",
+  title: "Bharat Indexes - custom Indian market trackers",
   description:
-    "Track India's biggest themes as single indexes — Adani, Tata, EV, Agri, Copper, Ethanol, Defence, Railways, IT, Pharma and Banks. Live NSE data.",
+    "Track India's biggest themes as single indexes, Adani, Tata, EV, Agri, Copper, Ethanol, Defence, Railways, IT, Pharma and Banks. Live NSE data.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
