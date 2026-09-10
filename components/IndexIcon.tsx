@@ -54,6 +54,21 @@ const icons: Record<string, (props: { className?: string }) => React.JSX.Element
       <path d="M3 21h18" /><path d="M3 10h18" /><path d="M5 6l7-3 7 3" /><path d="M4 10v11" /><path d="M20 10v11" /><path d="M8 14v3" /><path d="M12 14v3" /><path d="M16 14v3" />
     </svg>
   ),
+  kalyani: ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M4 20V4h4v16" /><path d="M8 12h5l7-8" /><path d="M13 12l7 8" />
+    </svg>
+  ),
+  kirloskar: ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="8" /><path d="M12 4v8l5 5" /><path d="M4 12h4" />
+    </svg>
+  ),
+  psu: ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 21h18" /><path d="M5 21V8l7-5 7 5v13" /><path d="M9 12h6" /><path d="M9 16h6" />
+    </svg>
+  ),
 };
 
 export default function IndexIcon({ slug, className = "w-8 h-8" }: { slug: string; className?: string }) {

@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getIndex, INDICES } from "@/lib/indices";
 import { getIndexData } from "@/lib/yahoo";
-import { fmtPct, fmtPrice } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
 import { getPosition } from "@/lib/portfolio";
 import IndexDashboard, { Positions } from "@/components/IndexDashboard";
 import IndexIcon from "@/components/IndexIcon";
+import ConstituentsTable from "@/components/ConstituentsTable";
 
 export const dynamic = "force-dynamic";
 
@@ -50,13 +50,6 @@ export default async function IndexPage({
       mcap: mc ? { units: mc.units, cost: mc.cost } : null,
     };
   }
-
-  const sorted = [...data3M.constituents].sort((a, b) => {
-    if (a.price == null && b.price == null) return 0;
-    if (a.price == null) return 1;
-    if (b.price == null) return -1;
-    return (b.changePct ?? 0) - (a.changePct ?? 0);
-  });
 
   return (
     <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:py-12">
@@ -102,51 +95,10 @@ export default async function IndexPage({
         <h2 className="mb-3 text-lg font-bold text-foreground">
           Constituents{" "}
           <span className="text-sm font-normal text-muted-light">
-            ({def.constituents.length} stocks &middot; % over 3M)
+            ({def.constituents.length} stocks &middot; selectable performance window)
           </span>
         </h2>
-        <div className="overflow-x-auto rounded-2xl border border-surface">
-          <table className="w-full text-sm">
-            <thead className="bg-surface/60 text-left text-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Company</th>
-                <th className="px-4 py-3 font-medium">Symbol</th>
-                <th className="px-4 py-3 text-right font-medium">Price</th>
-                <th className="px-4 py-3 text-right font-medium">3M</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((c) => {
-                const cUp = (c.changePct ?? 0) >= 0;
-                return (
-                  <tr
-                    key={c.symbol}
-                    className="border-t border-surface transition hover:bg-surface/30"
-                  >
-                    <td className="px-4 py-3 font-medium text-foreground">{c.name}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted">
-                      {c.symbol.replace(".NS", "")}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-foreground">
-                      {fmtPrice(c.price)}
-                    </td>
-                    <td
-                      className={`px-4 py-3 text-right font-mono font-semibold ${
-                        c.changePct == null
-                          ? "text-muted-light"
-                          : cUp
-                            ? "text-up"
-                            : "text-down"
-                      }`}
-                    >
-                      {fmtPct(c.changePct)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ConstituentsTable slug={def.slug} initial={data3M} />
       </section>
 
       {/* Other indexes */}
