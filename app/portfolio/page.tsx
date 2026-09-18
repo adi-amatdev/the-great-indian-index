@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllPositions, getTrades } from "@/lib/portfolio";
 import { getIndex } from "@/lib/indices";
+import { getCustomIndexForUser } from "@/lib/custom-indexes";
 import { getSpotPrice, Weighting } from "@/lib/yahoo";
 import { logoutAction } from "@/app/actions";
 import IndexIcon from "@/components/IndexIcon";
@@ -25,7 +26,7 @@ export default async function PortfolioPage() {
 
   const priced = await Promise.all(
     positions.map(async (p) => {
-      const def = getIndex(p.slug);
+      const def = getIndex(p.slug) ?? await getCustomIndexForUser(user.id, p.slug);
       const spot = def
         ? await getSpotPrice(def, p.weighting as Weighting)
         : null;
@@ -110,7 +111,7 @@ export default async function PortfolioPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-muted">
-                        {p.weighting === "mcap" ? "Market cap" : "Equal wt"}
+                        {p.weighting === "mcap" ? "Market cap" : p.weighting === "custom" ? "Custom weights" : "Equal wt"}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-foreground">
                         {p.units.toFixed(4)}
@@ -172,7 +173,7 @@ export default async function PortfolioPage() {
                           {def?.name ?? t.slug}
                         </span>
                         <span className="ml-1 text-xs text-muted-light">
-                          {t.weighting === "mcap" ? "\u00B7 mcap" : "\u00B7 eq"}
+                      {t.weighting === "mcap" ? "\u00B7 mcap" : t.weighting === "custom" ? "\u00B7 custom" : "\u00B7 eq"}
                         </span>
                       </td>
                       <td

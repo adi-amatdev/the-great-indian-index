@@ -12,6 +12,7 @@ const RANGE_KEYS: RangeKey[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"];
 export type Positions = {
   equal: { units: number; cost: number } | null;
   mcap: { units: number; cost: number } | null;
+  custom: { units: number; cost: number } | null;
 };
 
 export default function IndexDashboard({
@@ -77,7 +78,7 @@ export default function IndexDashboard({
 
         {/* Weighting toggle */}
         <div className="inline-flex rounded-full border border-surface bg-background p-1 text-sm">
-          {(["equal", "mcap"] as Weighting[]).map((w) => (
+          {(["equal", "mcap", ...(initial.weighting === "custom" ? ["custom"] : [])] as Weighting[]).map((w) => (
             <button
               key={w}
               onClick={() => setWeighting(w)}
@@ -87,7 +88,7 @@ export default function IndexDashboard({
                   : "text-muted hover:text-foreground"
               }`}
             >
-              {w === "equal" ? "Equal weight" : "Market cap"}
+              {w === "equal" ? "Equal weight" : w === "mcap" ? "Market cap" : "Custom weights"}
             </button>
           ))}
         </div>

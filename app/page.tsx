@@ -31,6 +31,10 @@ export default async function Home() {
         <p className="mt-3 text-sm text-muted-light">
           {INDICES.length} indexes &middot; {gainers} up over the last month
         </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Link href="/compare" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover">Open split compare</Link>
+          <Link href="/leaderboard" className="rounded-full border border-surface px-4 py-2 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent">See return leaders</Link>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

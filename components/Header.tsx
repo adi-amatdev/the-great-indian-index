@@ -31,9 +31,12 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-2 text-sm">
+        <nav className="flex items-center gap-1 text-sm">
+          <Link href="/compare" className="hidden rounded-full px-3 py-1.5 text-muted transition hover:bg-surface hover:text-foreground sm:inline-flex">Compare</Link>
+          <Link href="/leaderboard" className="hidden rounded-full px-3 py-1.5 text-muted transition hover:bg-surface hover:text-foreground md:inline-flex">Leaders</Link>
           {!loaded ? null : me ? (
             <>
+              <Link href="/custom" className="hidden rounded-full px-3 py-1.5 text-muted transition hover:bg-surface hover:text-foreground sm:inline-flex">My indexes</Link>
               <span className="hidden text-muted sm:inline">
                 &#x20B9;{me.cash.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
               </span>

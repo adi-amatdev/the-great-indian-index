@@ -54,6 +54,11 @@ const icons: Record<string, (props: { className?: string }) => React.JSX.Element
       <path d="M3 21h18" /><path d="M3 10h18" /><path d="M5 6l7-3 7 3" /><path d="M4 10v11" /><path d="M20 10v11" /><path d="M8 14v3" /><path d="M12 14v3" /><path d="M16 14v3" />
     </svg>
   ),
+  doublestack: ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M2 5h20" /><path d="M5 10h14" /><path d="M5 15h14" /><path d="M7 10v5" /><path d="M17 10v5" /><path d="M11 10v5" /><path d="M7 20h.01M17 20h.01" /><path d="M8 5V3" /><path d="M16 5V3" />
+    </svg>
+  ),
   kalyani: ({ className }) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M4 20V4h4v16" /><path d="M8 12h5l7-8" /><path d="M13 12l7 8" />
@@ -73,6 +78,8 @@ const icons: Record<string, (props: { className?: string }) => React.JSX.Element
 
 export default function IndexIcon({ slug, className = "w-8 h-8" }: { slug: string; className?: string }) {
   const Icon = icons[slug];
-  if (!Icon) return null;
+  if (!Icon) {
+    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true"><path d="M4 19V5h16v14" /><path d="M4 9h16M8 5v14M16 5v14" /><path d="M2 19h20" /></svg>;
+  }
   return <Icon className={className} />;
 }

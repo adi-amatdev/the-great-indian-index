@@ -18,6 +18,7 @@ model User {
   sessions  Session[]
   positions Position[]
   trades    Trade[]
+  customIndexes CustomIndex[]
 
   @@map("users")
 }
@@ -58,4 +59,32 @@ model Trade {
 
   @@map("trades")
   @@index([userId, ts(sort: Desc)])
+}
+
+model CustomIndex {
+  id          BigInt @id @default(autoincrement())
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      BigInt
+  slug        String @unique
+  name        String
+  tagline     String
+  description String
+  createdAt   BigInt
+  updatedAt   BigInt
+  constituents CustomIndexConstituent[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("custom_indexes")
+}
+
+model CustomIndexConstituent {
+  id           BigInt @id @default(autoincrement())
+  customIndex  CustomIndex @relation(fields: [customIndexId], references: [id], onDelete: Cascade)
+  customIndexId BigInt
+  symbol       String
+  name         String
+  weight       Float
+
+  @@unique([customIndexId, symbol])
+  @@map("custom_index_constituents")
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIndex } from "@/lib/indices";
+import { getCurrentUser } from "@/lib/auth";
+import { getCustomIndexForUser } from "@/lib/custom-indexes";
 import {
   getIndexData,
   RangeKey,
@@ -14,7 +16,8 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const def = getIndex(slug);
+  const user = await getCurrentUser();
+  const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null);
   if (!def) {
     return NextResponse.json({ error: "Unknown index" }, { status: 404 });
   }

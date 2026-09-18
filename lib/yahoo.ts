@@ -3,7 +3,7 @@ import { IndexDef } from "./indices";
 // ---- Ranges -----------------------------------------------------------------
 
 export type RangeKey = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y";
-export type Weighting = "equal" | "mcap";
+export type Weighting = "equal" | "mcap" | "custom";
 
 export const RANGES: { key: RangeKey; range: string; interval: string }[] = [
   { key: "1D", range: "1d", interval: "5m" },
@@ -20,7 +20,9 @@ export function resolveRange(key?: string) {
 }
 
 export function resolveWeighting(w?: string | null): Weighting {
-  return w === "mcap" ? "mcap" : "equal";
+  if (w === "mcap") return "mcap";
+  if (w === "custom") return "custom";
+  return "equal";
 }
 
 const UA =
@@ -257,9 +259,13 @@ export async function getIndexData(
       }),
     );
 
-    // Weight: equal = 1 for anything with data; mcap = market cap (fallback 0).
+    // Weight: explicit custom weights, equal weight, or market cap.
     weights.push(
-      weighting === "mcap" ? (marketCap && marketCap > 0 ? marketCap : 0) : 1,
+      weighting === "custom"
+        ? (c.weight && c.weight > 0 ? c.weight : 0)
+        : weighting === "mcap"
+          ? (marketCap && marketCap > 0 ? marketCap : 0)
+          : 1,
     );
   });
 
@@ -291,7 +297,12 @@ export async function getIndexData(
   let sNum = 0;
   let sDen = 0;
   quoteList.forEach((q) => {
-    const w = weighting === "mcap" ? (q.marketCap && q.marketCap > 0 ? q.marketCap : 0) : 1;
+    const c = def.constituents.find((item) => item.symbol === q.symbol);
+    const w = weighting === "custom"
+      ? (c?.weight && c.weight > 0 ? c.weight : 0)
+      : weighting === "mcap"
+        ? (q.marketCap && q.marketCap > 0 ? q.marketCap : 0)
+        : 1;
     if (q.price != null && w > 0) {
       sNum += w * q.price;
       sDen += w;

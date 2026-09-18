@@ -85,7 +85,7 @@ export default function TradePanel({
           Paper trading
         </h3>
         <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] uppercase text-muted">
-          {weighting === "mcap" ? "Market cap" : "Equal wt"}
+          {weighting === "mcap" ? "Market cap" : weighting === "custom" ? "Custom weights" : "Equal wt"}
         </span>
       </div>
 

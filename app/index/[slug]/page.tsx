@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getIndex, INDICES } from "@/lib/indices";
+import { getCustomIndexForUser } from "@/lib/custom-indexes";
 import { getIndexData } from "@/lib/yahoo";
 import { getCurrentUser } from "@/lib/auth";
 import { getPosition } from "@/lib/portfolio";
@@ -17,7 +18,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const def = getIndex(slug);
+  const user = await getCurrentUser();
+  const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null);
   if (!def) return { title: "Index not found" };
   return { title: `${def.name} - Bharat Indexes`, description: def.blurb };
 }
@@ -28,26 +30,28 @@ export default async function IndexPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const def = getIndex(slug);
+  const user = await getCurrentUser();
+  const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null);
   if (!def) notFound();
 
-  const [[data, data3M], user] = await Promise.all([
+  const [[data, data3M]] = await Promise.all([
     Promise.all([
-      getIndexData(def, "1D", "equal"),
-      getIndexData(def, "3M", "equal"),
+      getIndexData(def, "1D", def.custom ? "custom" : "equal"),
+      getIndexData(def, "3M", def.custom ? "custom" : "equal"),
     ]),
-    getCurrentUser(),
   ]);
 
-  let positions: Positions = { equal: null, mcap: null };
+  let positions: Positions = { equal: null, mcap: null, custom: null };
   if (user) {
-    const [eq, mc] = await Promise.all([
+    const [eq, mc, custom] = await Promise.all([
       getPosition(user.id, slug, "equal"),
       getPosition(user.id, slug, "mcap"),
+      getPosition(user.id, slug, "custom"),
     ]);
     positions = {
       equal: eq ? { units: eq.units, cost: eq.cost } : null,
       mcap: mc ? { units: mc.units, cost: mc.cost } : null,
+      custom: custom ? { units: custom.units, cost: custom.cost } : null,
     };
   }
 
@@ -88,6 +92,39 @@ export default async function IndexPage({
             positions={positions}
           />
         </div>
+      </section>
+
+      {/* Why this index exists */}
+      <section className="mt-8 rounded-2xl border border-surface bg-surface/50 p-6 sm:p-8">
+        <h2 className="text-lg font-bold text-foreground">
+          Why this index exists
+        </h2>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted">
+          {def.thesis}
+        </p>
+        {def.sources.length > 0 && (
+          <ul className="mt-4 flex flex-col gap-1.5">
+            {def.sources.map((s) => (
+              <li key={s.url} className="text-sm">
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted transition hover:text-accent"
+                >
+                  <span className="text-foreground">{s.title}</span>{" "}
+                  <span className="text-muted-light">
+                    &middot; {s.outlet} &middot; {s.date}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-4 text-xs text-muted-light">
+          Sources cited for how this theme is moving in the news &mdash; an
+          index is a lens on a story, not a recommendation.
+        </p>
       </section>
 
       {/* Constituents */}
