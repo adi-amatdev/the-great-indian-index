@@ -2,14 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
+import { logoutAction } from "@/app/actions";
 import { prisma } from "@/lib/prisma";
 import { toCustomIndex } from "@/lib/custom-indexes";
+import { isAdmin } from "@/lib/admin";
 import PageHeader from "@/components/ui/PageHeader";
 import Panel from "@/components/ui/Panel";
 import StatCard from "@/components/ui/StatCard";
 import ProfileEditForm from "@/components/ProfileEditForm";
 import IndexIcon from "@/components/IndexIcon";
-import { ArrowRight } from "@/components/ui/icons";
+import { ArrowRight, LogOut } from "@/components/ui/icons";
+import AccountDangerZone from "@/components/AccountDangerZone";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +61,7 @@ export default async function UserProfilePage({
   const owned = indexes.filter((i) => i.userId === profile.id).length;
   const coOwned = indexes.length - owned;
   const isSelf = currentUser?.id === profile.id;
+  const admin = isSelf && isAdmin(currentUser);
   const links = (Array.isArray(profile.links) ? profile.links : []) as LinkRow[];
   const memberSince = new Date(Number(profile.createdAt)).toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -73,9 +77,19 @@ export default async function UserProfilePage({
         description={profile.bio ?? "No bio yet."}
         aside={
           isSelf ? (
-            <span className="rounded-full bg-accent/10 px-3 py-1 font-mono text-xs font-bold text-accent">
-              this is you
-            </span>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {admin && (
+                <Link href="/admin" className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-white transition hover:bg-accent-hover">
+                  Admin dashboard
+                </Link>
+              )}
+              <form action={logoutAction}>
+                <button className="inline-flex items-center gap-1.5 rounded-full border border-surface bg-background px-3 py-1.5 text-xs font-bold text-muted transition hover:border-accent hover:text-foreground">
+                  <LogOut className="h-3.5 w-3.5" />
+                  Log out
+                </button>
+              </form>
+            </div>
           ) : undefined
         }
       />
@@ -120,6 +134,7 @@ export default async function UserProfilePage({
               links={links}
             />
           )}
+          {isSelf && <AccountDangerZone />}
         </div>
 
         {/* Their indexes */}
