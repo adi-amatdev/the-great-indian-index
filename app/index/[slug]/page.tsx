@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getIndex, INDICES } from "@/lib/indices";
-import { getCustomIndexForUser, getPublicCustomIndex } from "@/lib/custom-indexes";
+import { customId, getCustomIndexForUser, getPublicCustomIndex, listCollaborators } from "@/lib/custom-indexes";
+import { listDiscussionPosts } from "@/lib/discussion";
 import { getCachedIndexData } from "@/lib/index-cache";
 import { getCurrentUser } from "@/lib/auth";
 import { getPosition } from "@/lib/portfolio";
@@ -12,6 +13,7 @@ import ConstituentsTable from "@/components/ConstituentsTable";
 import Panel from "@/components/ui/Panel";
 import PageHeader from "@/components/ui/PageHeader";
 import { ArrowLeft, ArrowRight } from "@/components/ui/icons";
+import IndexDiscussion from "@/components/IndexDiscussion";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,10 @@ export default async function IndexPage({
   const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null) ?? await getPublicCustomIndex(slug);
   if (!def) notFound();
   const canTrade = !def.custom || Boolean(user && await getCustomIndexForUser(user.id, slug));
+  const [discussionPosts, collaborators] = await Promise.all([
+    listDiscussionPosts(slug),
+    def.custom && customId(slug) != null ? listCollaborators(customId(slug)!) : Promise.resolve([]),
+  ]);
 
   const [[data, data3M]] = await Promise.all([
     Promise.all([
@@ -99,6 +105,23 @@ export default async function IndexPage({
         cash={user ? user.cash : null}
         positions={positions}
       />
+
+      <section className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <Panel label="People behind this index" context={def.custom ? "community-built" : "editorial index"}>
+          <div className="space-y-3 text-sm">
+            <div className="rounded-xl border border-surface bg-background/55 p-3">
+              <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted">Creator</div>
+              {def.creatorUsername ? <Link href={`/user/${def.creatorUsername}`} className="mt-1 inline-block font-semibold text-foreground hover:text-accent">@{def.creatorUsername}</Link> : <div className="mt-1 font-semibold text-foreground">Bharat Indexes research desk</div>}
+            </div>
+            <div className="rounded-xl border border-surface bg-background/55 p-3">
+              <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted">Collective</div>
+              <div className="mt-1 font-semibold text-foreground">{def.groupName ?? (collaborators.length ? "Index contributors" : "Independent research")}</div>
+            </div>
+            {collaborators.length > 0 && <div className="rounded-xl border border-surface bg-background/55 p-3"><div className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted">Co-owners</div><div className="mt-2 flex flex-wrap gap-2">{collaborators.map((member) => <Link key={member.userId.toString()} href={`/user/${member.username}`} className="rounded-full border border-surface px-2.5 py-1 font-mono text-xs font-semibold text-muted hover:border-accent hover:text-accent">@{member.username}</Link>)}</div></div>}
+          </div>
+        </Panel>
+        <IndexDiscussion slug={slug} posts={discussionPosts} currentUserId={user?.id.toString() ?? null} />
+      </section>
 
       {/* Why this index exists */}
       <section className="mt-10">

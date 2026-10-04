@@ -97,6 +97,8 @@ export async function registerUser(
   username: string,
   password: string,
   email: string,
+  bio = "",
+  about = "",
 ): Promise<AuthResult> {
   username = username.trim().toLowerCase();
   if (username.length < 3)
@@ -118,6 +120,8 @@ export async function registerUser(
     data: {
       username,
       email,
+      bio: bio.trim().slice(0, 160) || null,
+      about: about.trim().slice(0, 1000) || null,
       passHash: await hashPassword(password),
       cash: STARTING_CASH,
       createdAt: BigInt(Date.now()),

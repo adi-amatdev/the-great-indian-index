@@ -60,6 +60,7 @@ export function toCustomIndex(row: {
   description: string;
   sources?: unknown;
   creatorUsername?: string;
+  groupName?: string | null;
   constituents: CustomConstituentInput[];
 }): IndexDef {
   return {
@@ -73,6 +74,7 @@ export function toCustomIndex(row: {
     sources: parseSources(row.sources),
     custom: true,
     creatorUsername: row.creatorUsername,
+    groupName: row.groupName ?? undefined,
     constituents: row.constituents,
   };
 }
@@ -119,6 +121,7 @@ export async function getCustomIndexForUser(
         tagline: row.tagline,
         description: row.description,
         sources: row.sources,
+        groupName: row.groupName,
         creatorUsername: row.user.username,
         constituents: row.constituents,
       })
@@ -142,6 +145,7 @@ export async function listCustomIndexes(userId: bigint) {
       tagline: row.tagline,
       description: row.description,
       sources: row.sources,
+      groupName: row.groupName,
       creatorUsername: row.user.username,
       constituents: row.constituents,
     }),
@@ -164,6 +168,7 @@ export async function listPublicCustomIndexes() {
       tagline: row.tagline,
       description: row.description,
       sources: row.sources,
+      groupName: row.groupName,
       creatorUsername: row.user.username,
       constituents: row.constituents,
     }),
@@ -185,6 +190,7 @@ export async function getPublicCustomIndex(slug: string) {
         tagline: row.tagline,
         description: row.description,
         sources: row.sources,
+        groupName: row.groupName,
         creatorUsername: row.user.username,
         constituents: row.constituents,
       })
@@ -212,7 +218,10 @@ export async function addCollaborator(
   customIndexId: bigint,
   username: string,
   addedBy: bigint,
+  groupName: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  groupName = groupName.trim().slice(0, 80);
+  if (groupName.length < 2) return { ok: false, error: "Choose a collective name before inviting a co-owner." };
   const target = await prisma.user.findUnique({
     where: { username: username.trim().toLowerCase() },
     select: { id: true, username: true },
@@ -231,6 +240,8 @@ export async function addCollaborator(
     where: { customIndexId, recipientId: target.id, status: "pending" },
   });
   if (pending) return { ok: false, error: `@${target.username} already has an invite.` };
+
+  await prisma.customIndex.update({ where: { id: customIndexId }, data: { groupName } });
 
   await prisma.customIndexInvite.create({
     data: {

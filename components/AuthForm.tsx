@@ -40,6 +40,10 @@ export default function AuthForm() {
             <div className="mb-4">
               <label htmlFor="email" className="mb-1.5 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted">Email</label>
               <input id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" className="w-full rounded-xl border border-surface bg-background px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-light focus:border-accent" />
+              <label htmlFor="bio" className="mb-1.5 mt-4 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted">Short bio</label>
+              <input id="bio" name="bio" maxLength={160} placeholder="What do you follow in the market?" className="w-full rounded-xl border border-surface bg-background px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-light focus:border-accent" />
+              <label htmlFor="about" className="mb-1.5 mt-4 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted">About you</label>
+              <textarea id="about" name="about" maxLength={1000} rows={3} placeholder="Your research approach or interests" className="w-full rounded-xl border border-surface bg-background px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-light focus:border-accent" />
             </div>
           )}
           <label

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/admin";
 import PageHeader from "@/components/ui/PageHeader";
 import StatCard from "@/components/ui/StatCard";
+import AdminUserDirectory from "@/components/AdminUserDirectory";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin - Bharat Indexes" };
@@ -17,7 +18,7 @@ export default async function AdminPage() {
     prisma.customIndexInvite.count({ where: { status: "pending" } }),
     prisma.trade.count(),
     prisma.indexCache.count(),
-    prisma.user.findMany({ select: { username: true, email: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 20 }),
+    prisma.user.findMany({ select: { username: true, email: true, bio: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 100 }),
   ]);
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 sm:py-12">
@@ -29,12 +30,7 @@ export default async function AdminPage() {
         <StatCard label="Trades" value={trades} />
         <StatCard label="Cache rows" value={cache} />
       </section>
-      <section className="mt-8 overflow-hidden rounded-2xl border border-surface bg-surface/40">
-        <div className="border-b border-surface bg-background/50 px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider text-muted">Recent signups</div>
-        <div className="divide-y divide-surface/70">
-          {recentUsers.map((row) => <div key={row.username} className="flex items-center justify-between gap-3 px-4 py-3 text-sm"><span className="font-semibold text-foreground">@{row.username}</span><span className="font-mono text-xs text-muted">{row.email ?? "email missing"} · {new Date(Number(row.createdAt)).toLocaleDateString("en-IN")}</span></div>)}
-        </div>
-      </section>
+      <AdminUserDirectory users={recentUsers.map((row) => ({ ...row, createdAt: Number(row.createdAt) }))} />
     </main>
   );
 }

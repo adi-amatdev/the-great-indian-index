@@ -164,6 +164,7 @@ export default async function UserProfilePage({
                   tagline: row.tagline,
                   description: row.description,
                   sources: row.sources,
+                  groupName: row.groupName,
                   creatorUsername: row.user.username,
                   constituents: row.constituents,
                 });

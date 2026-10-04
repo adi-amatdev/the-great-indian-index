@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { IndexData, RangeKey } from "@/lib/yahoo";
 import Sparkline from "./Sparkline";
@@ -43,6 +43,7 @@ export default function LeaderboardTable() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [query, setQuery] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loadedPeriod, setLoadedPeriod] = useState<RangeKey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +69,10 @@ export default function LeaderboardTable() {
   }, [period, page]);
 
   const loading = loadedPeriod !== period;
+  const visibleRows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return needle ? rows.filter((row) => `${row.name} ${row.creatorUsername ?? ""}`.toLowerCase().includes(needle)) : rows;
+  }, [rows, query]);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 sm:py-12">
@@ -94,6 +99,9 @@ export default function LeaderboardTable() {
       />
 
       <div className="overflow-hidden rounded-2xl border border-surface bg-surface/40">
+        <div className="flex justify-end border-b border-surface bg-background/50 px-4 py-3">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search indexes or creators…" aria-label="Search leaderboard" className="w-full rounded-lg border border-surface bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:border-accent sm:w-64" />
+        </div>
         {loading ? (
           <div className="flex flex-col items-center gap-3 p-14 text-sm text-muted">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
@@ -125,7 +133,7 @@ export default function LeaderboardTable() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, index) => {
+                {visibleRows.map((row) => {
                   const up = (row.changePct ?? 0) >= 0;
                   return (
                     <tr
@@ -135,7 +143,7 @@ export default function LeaderboardTable() {
                       <td className="px-4 py-3 sm:px-5">
                         <span
                           className={`grid h-7 w-7 place-items-center rounded-lg font-mono text-xs font-black ${
-                            RANK_STYLES[index] ?? "text-muted-light"
+                            RANK_STYLES[row.rank - 1] ?? "text-muted-light"
                           }`}
                         >
                           {String(row.rank).padStart(2, "0")}
@@ -157,6 +165,9 @@ export default function LeaderboardTable() {
                           >
                             by @{row.creatorUsername}
                           </Link>
+                        )}
+                        {!row.custom && (
+                          <span className="mt-0.5 block text-[11px] text-muted">by Bharat Indexes research desk</span>
                         )}
                       </td>
                       <td className="px-3 py-3">

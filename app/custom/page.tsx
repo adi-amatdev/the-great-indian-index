@@ -114,6 +114,7 @@ export default async function CustomIndexesPage() {
                     slug={index.slug}
                     collaborators={collaboratorsBySlug.get(index.slug) ?? []}
                     isCreator={index.creatorUsername === user.username}
+                    groupName={index.groupName}
                   />
                   <details className="group">
                     <summary className="cursor-pointer list-none text-sm font-bold text-foreground transition hover:text-accent">

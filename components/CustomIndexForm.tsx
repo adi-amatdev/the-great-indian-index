@@ -115,7 +115,7 @@ export default function CustomIndexForm({
             defaultValue={initial?.name}
             required
             maxLength={80}
-            placeholder="Intuitifi Model Portfolio"
+            placeholder="Theme Rotation Basket"
             className="w-full rounded-xl border border-surface bg-background px-3 py-2.5 text-foreground outline-none transition placeholder:text-muted-light focus:border-accent"
           />
         </label>

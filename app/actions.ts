@@ -21,6 +21,7 @@ import {
 import { getSpotPrice, resolveWeighting } from "@/lib/yahoo";
 import { buy, sell, TradeResult } from "@/lib/portfolio";
 import { prisma } from "@/lib/prisma";
+import { createDiscussionPost, deleteDiscussionPost } from "@/lib/discussion";
 
 // ---- Auth (used with <form action={...}>) -----------------------------------
 
@@ -33,7 +34,9 @@ export async function registerAction(
   const username = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
   const email = String(formData.get("email") ?? "");
-  const res = await registerUser(username, password, email);
+  const bio = String(formData.get("bio") ?? "");
+  const about = String(formData.get("about") ?? "");
+  const res = await registerUser(username, password, email, bio, about);
   if (!res.ok) return { error: res.error };
   redirect("/portfolio");
 }
@@ -252,11 +255,12 @@ export async function inviteCollaboratorAction(
   if (!user) return { error: "Log in to invite." };
   const id = customId(String(formData.get("id") ?? ""));
   const username = String(formData.get("username") ?? "").trim();
+  const groupName = String(formData.get("groupName") ?? "").trim();
   if (id == null) return { error: "Unknown index." };
   if (!username) return { error: "Enter a username to invite." };
   if (!(await canEditCustomIndex(user.id, id)))
     return { error: "You don't have edit access to this index." };
-  const res = await addCollaborator(id, username, user.id);
+  const res = await addCollaborator(id, username, user.id, groupName);
   if (!res.ok) return { error: res.error };
   revalidatePath("/custom");
   return { ok: true };
@@ -370,4 +374,26 @@ export async function deleteAccountAction(formData: FormData): Promise<void> {
   await prisma.user.delete({ where: { id: user.id } });
   await logoutUser();
   redirect("/");
+}
+
+export async function postDiscussionAction(_prev: ProfileState, formData: FormData): Promise<ProfileState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Log in to join the discussion." };
+  const slug = String(formData.get("slug") ?? "").trim();
+  const result = await createDiscussionPost(user.id, slug, String(formData.get("body") ?? ""));
+  if (!result.ok) return { error: result.error };
+  revalidatePath(`/index/${slug}`);
+  return { ok: true };
+}
+
+export async function deleteDiscussionPostAction(formData: FormData): Promise<ProfileState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Log in to manage your post." };
+  const rawId = String(formData.get("postId") ?? "");
+  if (!/^\d+$/.test(rawId)) return { error: "Invalid post." };
+  const slug = String(formData.get("slug") ?? "").trim();
+  const result = await deleteDiscussionPost(user.id, BigInt(rawId));
+  if (!result.ok) return { error: result.error };
+  revalidatePath(`/index/${slug}`);
+  return { ok: true };
 }

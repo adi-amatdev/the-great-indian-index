@@ -42,6 +42,8 @@ export type IndexDef = {
   custom?: boolean;
   /** Username of the creator (only set on custom indexes). */
   creatorUsername?: string;
+  /** Collective name for a custom index with multiple collaborators. */
+  groupName?: string;
 };
 
 export const INDICES: IndexDef[] = [

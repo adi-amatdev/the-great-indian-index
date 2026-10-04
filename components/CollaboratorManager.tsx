@@ -10,12 +10,13 @@ import type { Collaborator } from "@/lib/custom-indexes";
 
 type State = { error?: string; ok?: boolean } | undefined;
 
-function InviteForm({ slug }: { slug: string }) {
+function InviteForm({ slug, initialGroupName }: { slug: string; initialGroupName?: string }) {
   const [state, action, pending] = useActionState(
     async (_prev: State, formData: FormData) => inviteCollaboratorAction(formData),
     undefined,
   );
   const [username, setUsername] = useState("");
+  const [groupName, setGroupName] = useState(initialGroupName ?? "");
 
   return (
     <form
@@ -23,6 +24,9 @@ function InviteForm({ slug }: { slug: string }) {
       onSubmit={() => setUsername("")}
       className="space-y-1.5"
     >
+      <div className="mb-2">
+        <input name="groupName" value={groupName} onChange={(e) => setGroupName(e.target.value)} required placeholder="Collective / group name" aria-label="Collective group name" className="w-full rounded-lg border border-surface bg-background px-2.5 py-1.5 font-mono text-xs text-foreground outline-none transition placeholder:text-muted-light focus:border-accent" />
+      </div>
       <div className="flex gap-2">
         <input
           type="hidden"
@@ -91,10 +95,12 @@ export default function CollaboratorManager({
   slug,
   collaborators,
   isCreator,
+  groupName,
 }: {
   slug: string;
   collaborators: Collaborator[];
   isCreator: boolean;
+  groupName?: string;
 }) {
   return (
     <div className="rounded-xl border border-surface bg-background/50 p-3">
@@ -128,7 +134,7 @@ export default function CollaboratorManager({
       )}
 
       <div className="mt-2 border-t border-surface/70 pt-2">
-        <InviteForm slug={slug} />
+        <InviteForm slug={slug} initialGroupName={groupName} />
       </div>
     </div>
   );
