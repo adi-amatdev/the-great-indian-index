@@ -15,10 +15,14 @@ model User {
   passHash  String
   cash      Float
   createdAt BigInt
+  bio       String?
+  about     String?
+  links     Json?
   sessions  Session[]
   positions Position[]
   trades    Trade[]
   customIndexes CustomIndex[]
+  collaboratesOn CustomIndexCollaborator[]
 
   @@map("users")
 }
@@ -69,9 +73,11 @@ model CustomIndex {
   name        String
   tagline     String
   description String
+  sources     Json?
   createdAt   BigInt
   updatedAt   BigInt
   constituents CustomIndexConstituent[]
+  collaborators CustomIndexCollaborator[]
 
   @@index([userId, updatedAt(sort: Desc)])
   @@map("custom_indexes")
@@ -87,4 +93,40 @@ model CustomIndexConstituent {
 
   @@unique([customIndexId, symbol])
   @@map("custom_index_constituents")
+}
+
+// Membership of a custom index beyond its creator. Creator is always the
+// CustomIndex.userId (an implicit owner); invited users land here and get full
+// edit access, so every "co-owner" can CRUD the basket and run analysis on it.
+model CustomIndexCollaborator {
+  customIndex   CustomIndex @relation(fields: [customIndexId], references: [id], onDelete: Cascade)
+  customIndexId BigInt
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        BigInt
+  role          String      @default("editor") // owner | editor
+  addedBy       BigInt
+  createdAt     BigInt
+
+  @@id([customIndexId, userId])
+  @@index([userId])
+  @@map("custom_index_collaborators")
+}
+
+// Frequency-aware cache of computed index series. Storing the fully computed
+// IndexData here means popular comparisons (high hitCount) skip the ~30 Yahoo
+// chart fetches per request and are served straight from Postgres, refreshed in
+// the background before they go stale.
+model IndexCache {
+  key         String  @id // `slug:range:weighting` (built-ins) or `custom:<sig>:range:weighting`
+  slug        String
+  range       String
+  weighting   String
+  data        Json
+  hitCount    Int     @default(0)
+  requestedAt BigInt // unix ms of last request
+  updatedAt   BigInt // unix ms of last refresh
+  createdAt   BigInt // unix ms of first request
+
+  @@index([hitCount, updatedAt])
+  @@map("index_cache")
 }

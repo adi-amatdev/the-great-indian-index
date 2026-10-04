@@ -3,11 +3,11 @@ import { getIndex } from "@/lib/indices";
 import { getCurrentUser } from "@/lib/auth";
 import { getCustomIndexForUser } from "@/lib/custom-indexes";
 import {
-  getIndexData,
   RangeKey,
   resolveRange,
   resolveWeighting,
 } from "@/lib/yahoo";
+import { getCachedIndexData } from "@/lib/index-cache";
 
 export const revalidate = 60;
 
@@ -26,7 +26,7 @@ export async function GET(
     .key as RangeKey;
   const weighting = resolveWeighting(req.nextUrl.searchParams.get("weighting"));
 
-  const data = await getIndexData(def, range, weighting);
+  const data = await getCachedIndexData(def, range, weighting);
   return NextResponse.json(data, {
     headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" },
   });

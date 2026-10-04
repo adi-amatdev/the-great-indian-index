@@ -9,7 +9,13 @@ import {
   registerUser,
 } from "@/lib/auth";
 import { getIndex } from "@/lib/indices";
-import { getCustomIndexForUser } from "@/lib/custom-indexes";
+import {
+  addCollaborator,
+  canEditCustomIndex,
+  customId,
+  getCustomIndexForUser,
+  removeCollaborator,
+} from "@/lib/custom-indexes";
 import { getSpotPrice, resolveWeighting } from "@/lib/yahoo";
 import { buy, sell, TradeResult } from "@/lib/portfolio";
 import { prisma } from "@/lib/prisma";
@@ -96,6 +102,32 @@ export async function sellIndex(
 type CustomIndexActionState = { error?: string; ok?: boolean } | undefined;
 
 type ParsedCustomConstituent = { symbol: string; name: string; weight: number };
+type ParsedSource = { title: string; outlet: string; date: string; url: string };
+
+function parseSources(raw: string): { error: string } | { sources: ParsedSource[] } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { sources: [] };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return { error: "Sources must be valid JSON." };
+  }
+  if (!Array.isArray(parsed) || parsed.length > 6)
+    return { error: "Add up to 6 sources." };
+  const sources = parsed.map((item) => {
+    const row = item as Record<string, unknown>;
+    return {
+      title: String(row.title ?? "").trim(),
+      outlet: String(row.outlet ?? "").trim(),
+      date: String(row.date ?? "").trim(),
+      url: String(row.url ?? "").trim(),
+    };
+  });
+  if (sources.some((s) => !s.title || !s.url))
+    return { error: "Each source needs a title and a URL." };
+  return { sources };
+}
 
 function parseConstituents(raw: string): { error: string } | { constituents: ParsedCustomConstituent[] } {
   let parsed: unknown;
@@ -130,7 +162,15 @@ async function customIndexInput(formData: FormData) {
   if (description.length < 10 || description.length > 500) return { error: "Description must be 10–500 characters." };
   const constituents = parseConstituents(String(formData.get("constituents") ?? ""));
   if ("error" in constituents) return constituents;
-  return { name, tagline, description, constituents: constituents.constituents } as const;
+  const sources = parseSources(String(formData.get("sources") ?? ""));
+  if ("error" in sources) return sources;
+  return {
+    name,
+    tagline,
+    description,
+    constituents: constituents.constituents,
+    sources: sources.sources,
+  } as const;
 }
 
 export async function createCustomIndex(formData: FormData): Promise<CustomIndexActionState> {
@@ -146,6 +186,7 @@ export async function createCustomIndex(formData: FormData): Promise<CustomIndex
       name: input.name,
       tagline: input.tagline,
       description: input.description,
+      sources: input.sources,
       createdAt: now,
       updatedAt: now,
       constituents: { create: input.constituents },
@@ -174,6 +215,7 @@ export async function updateCustomIndex(formData: FormData): Promise<CustomIndex
       name: input.name,
       tagline: input.tagline,
       description: input.description,
+      sources: input.sources,
       updatedAt: BigInt(Date.now()),
       constituents: {
         deleteMany: {},
@@ -192,7 +234,95 @@ export async function deleteCustomIndex(formData: FormData): Promise<void> {
   const raw = String(formData.get("id") ?? "");
   const id = raw.startsWith("custom-") && /^\d+$/.test(raw.slice(7)) ? BigInt(raw.slice(7)) : null;
   if (id == null) return;
-  await prisma.customIndex.deleteMany({ where: { id, userId: user.id } });
+  if (!(await canEditCustomIndex(user.id, id))) return;
+  await prisma.customIndex.delete({ where: { id } });
   revalidatePath("/custom");
   revalidatePath("/compare");
+}
+
+// ---- Co-owners --------------------------------------------------------------
+
+export async function inviteCollaboratorAction(
+  formData: FormData,
+): Promise<CustomIndexActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Log in to invite." };
+  const id = customId(String(formData.get("id") ?? ""));
+  const username = String(formData.get("username") ?? "").trim();
+  if (id == null) return { error: "Unknown index." };
+  if (!username) return { error: "Enter a username to invite." };
+  if (!(await canEditCustomIndex(user.id, id)))
+    return { error: "You don't have edit access to this index." };
+  const res = await addCollaborator(id, username, user.id);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/custom");
+  return { ok: true };
+}
+
+export async function removeCollaboratorAction(
+  formData: FormData,
+): Promise<CustomIndexActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Log in to manage co-owners." };
+  const id = customId(String(formData.get("id") ?? ""));
+  const username = String(formData.get("username") ?? "").trim();
+  if (id == null) return { error: "Unknown index." };
+  const custom = await prisma.customIndex.findUnique({
+    where: { id },
+    select: { userId: true },
+  });
+  if (!custom) return { error: "Unknown index." };
+  if (!(await canEditCustomIndex(user.id, id)))
+    return { error: "You don't have edit access to this index." };
+  const res = await removeCollaborator(id, username, user.id, custom.userId === user.id);
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/custom");
+  return { ok: true };
+}
+
+// ---- Profile ----------------------------------------------------------------
+
+export type ProfileState = { error?: string; ok?: boolean } | undefined;
+
+export async function updateProfileAction(
+  _prev: ProfileState,
+  formData: FormData,
+): Promise<ProfileState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Log in to edit your profile." };
+
+  const bio = String(formData.get("bio") ?? "").trim().slice(0, 160);
+  const about = String(formData.get("about") ?? "").trim().slice(0, 1000);
+
+  let links: { label: string; url: string }[] = [];
+  const rawLinks = String(formData.get("links") ?? "").trim();
+  if (rawLinks) {
+    try {
+      const parsed = JSON.parse(rawLinks);
+      if (!Array.isArray(parsed) || parsed.length > 4)
+        return { error: "Add up to 4 links." };
+      links = parsed
+        .map((item) => {
+          const row = item as Record<string, unknown>;
+          return {
+            label: String(row.label ?? "").trim().slice(0, 40),
+            url: String(row.url ?? "").trim().slice(0, 300),
+          };
+        })
+        .filter((link) => link.label && link.url);
+    } catch {
+      return { error: "Links must be valid JSON." };
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      bio: bio || null,
+      about: about || null,
+      links: links.length ? links : undefined,
+    },
+  });
+  revalidatePath(`/user/${user.username}`);
+  return { ok: true };
 }

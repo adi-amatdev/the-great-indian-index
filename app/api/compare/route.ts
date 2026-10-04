@@ -3,7 +3,8 @@ import { getIndex } from "@/lib/indices";
 import { getCurrentUser } from "@/lib/auth";
 import { getCustomIndexForUser } from "@/lib/custom-indexes";
 import { getBenchmark } from "@/lib/benchmarks";
-import { getIndexData, resolveRange, resolveWeighting, type Weighting } from "@/lib/yahoo";
+import { resolveRange, resolveWeighting, type Weighting } from "@/lib/yahoo";
+import { getCachedIndexData } from "@/lib/index-cache";
 import { withRisk } from "@/lib/analytics";
 
 async function resolveDefinition(slug: string, userId: bigint | null) {
@@ -26,9 +27,9 @@ export async function GET(req: NextRequest) {
   if (!left || !right || !benchmark) return NextResponse.json({ error: "Unknown comparison item." }, { status: 404 });
   const effectiveWeighting = weighting === "custom" && !left.custom && !right.custom ? "equal" : weighting;
   const data = await Promise.all([
-    getIndexData(left, range, left.custom ? "custom" : effectiveWeighting),
-    getIndexData(right, range, right.custom ? "custom" : effectiveWeighting),
-    getIndexData(benchmark, range, "equal"),
+    getCachedIndexData(left, range, left.custom ? "custom" : effectiveWeighting),
+    getCachedIndexData(right, range, right.custom ? "custom" : effectiveWeighting),
+    getCachedIndexData(benchmark, range, "equal"),
   ]);
   return NextResponse.json({ range, weighting: effectiveWeighting as Weighting, left: withRisk(data[0]), right: withRisk(data[1]), benchmark: withRisk(data[2]) }, { headers: { "Cache-Control": "s-maxage=60, stale-while-revalidate=300" } });
 }

@@ -3,17 +3,205 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { IndexData, RangeKey } from "@/lib/yahoo";
-import { fmtPct } from "@/lib/format";
+import Sparkline from "./Sparkline";
+import PageHeader from "./ui/PageHeader";
+import Segmented from "./ui/Segmented";
+import ChangePill from "./ui/ChangePill";
+import MarketStatus from "./MarketStatus";
+import { ArrowRight } from "./ui/icons";
 
-type Row = IndexData & { custom?: boolean; risk: { volatility: number | null; sharpe: number | null; sortino: number | null; maxDrawdown: number | null } };
-const periods: { key: RangeKey; label: string }[] = [{ key: "1D", label: "Day" }, { key: "1W", label: "Week" }, { key: "1M", label: "Month" }, { key: "3M", label: "3 months" }, { key: "6M", label: "6 months" }, { key: "1Y", label: "Year" }, { key: "5Y", label: "5 years" }];
+type Row = IndexData & {
+  custom?: boolean;
+  creatorUsername?: string;
+  risk: {
+    volatility: number | null;
+    sharpe: number | null;
+    sortino: number | null;
+    maxDrawdown: number | null;
+  };
+};
+
+const PERIODS: { key: RangeKey; label: string }[] = [
+  { key: "1D", label: "Day" },
+  { key: "1W", label: "Week" },
+  { key: "1M", label: "Month" },
+  { key: "3M", label: "3 months" },
+  { key: "6M", label: "6 months" },
+  { key: "1Y", label: "Year" },
+  { key: "5Y", label: "5 years" },
+];
+
+const RANK_STYLES = [
+  "text-foreground bg-accent/15 text-accent",
+  "text-foreground bg-surface",
+  "text-foreground bg-surface",
+];
 
 export default function LeaderboardTable() {
   const [period, setPeriod] = useState<RangeKey>("1M");
   const [rows, setRows] = useState<Row[]>([]);
   const [loadedPeriod, setLoadedPeriod] = useState<RangeKey | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { const controller = new AbortController(); fetch(`/api/leaderboard?range=${period}`, { signal: controller.signal }).then(async (r) => { if (!r.ok) throw new Error("Leaderboard unavailable."); return r.json(); }).then((d: { rows: Row[] }) => { setRows(d.rows); setError(null); setLoadedPeriod(period); }).catch((e: Error) => { if (e.name !== "AbortError") setError(e.message); }); return () => controller.abort(); }, [period]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/leaderboard?range=${period}`, { signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Leaderboard unavailable.");
+        return r.json();
+      })
+      .then((d: { rows: Row[] }) => {
+        setRows(d.rows);
+        setError(null);
+        setLoadedPeriod(period);
+      })
+      .catch((e: Error) => {
+        if (e.name !== "AbortError") setError(e.message);
+      });
+    return () => controller.abort();
+  }, [period]);
+
   const loading = loadedPeriod !== period;
-  return <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:py-14"><div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Market scoreboard</p><h1 className="mt-2 text-4xl font-black tracking-tight text-foreground">Leaders by return</h1><p className="mt-3 max-w-2xl text-muted">Rankings are rebased over the same period. Sharpe and drawdown add the risk taken to get there.</p></div><div className="flex flex-wrap gap-1 rounded-2xl border border-surface bg-surface/40 p-1">{periods.map((item) => <button key={item.key} onClick={() => setPeriod(item.key)} className={`rounded-xl px-3 py-2 text-xs font-bold ${period === item.key ? "bg-accent text-white" : "text-muted hover:text-foreground"}`}>{item.label}</button>)}</div></div><div className="overflow-x-auto rounded-2xl border border-surface bg-surface/40">{loading ? <div className="p-12 text-center text-sm text-muted">Refreshing the board...</div> : error ? <div role="alert" className="p-12 text-center text-sm text-down">{error}</div> : <table className="w-full min-w-[720px] text-left text-sm"><thead className="border-b border-surface bg-surface/60 text-xs uppercase tracking-wider text-muted-light"><tr><th className="px-5 py-4">#</th><th className="px-3 py-4">Index</th><th className="px-3 py-4">Return</th><th className="px-3 py-4">Sharpe</th><th className="px-3 py-4">Sortino</th><th className="px-3 py-4">Volatility</th><th className="px-3 py-4">Max drawdown</th><th className="px-5 py-4">Open</th></tr></thead><tbody>{rows.map((row, index) => <tr key={row.slug} className="border-b border-surface/70 last:border-0 hover:bg-surface/30"><td className="px-5 py-4 font-mono text-muted-light">{String(index + 1).padStart(2, "0")}</td><td className="px-3 py-4 font-bold text-foreground">{row.name}{row.custom && <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] text-accent">YOU</span>}</td><td className={`px-3 py-4 font-mono font-bold ${(row.changePct ?? 0) >= 0 ? "text-up" : "text-down"}`}>{fmtPct(row.changePct)}</td><td className="px-3 py-4 font-mono text-muted">{row.risk.sharpe?.toFixed(2) ?? "-"}</td><td className="px-3 py-4 font-mono text-muted">{row.risk.sortino?.toFixed(2) ?? "-"}</td><td className="px-3 py-4 font-mono text-muted">{row.risk.volatility?.toFixed(2) ?? "-"}%</td><td className="px-3 py-4 font-mono text-down">{row.risk.maxDrawdown?.toFixed(2) ?? "-"}%</td><td className="px-5 py-4"><Link href={row.custom ? `/compare?left=${row.slug}` : `/index/${row.slug}`} className="font-semibold text-accent hover:underline">View &rarr;</Link></td></tr>)}</tbody></table>}</div><p className="mt-5 text-xs leading-relaxed text-muted-light">Risk metrics use the available observations, annualized from their sampling interval. Sharpe assumes a 0% risk-free rate. Data via Yahoo Finance, delayed.</p></main>;
+
+  return (
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 sm:py-12">
+      <PageHeader
+        eyebrow="Market scoreboard"
+        title="Leaders by return"
+        description={
+          <>
+            Rankings are rebased over the same window. Sharpe and drawdown add
+            the risk taken to get there.
+            <span className="mt-3 flex items-center gap-2">
+              <MarketStatus />
+            </span>
+          </>
+        }
+        aside={
+          <Segmented<RangeKey>
+            label="Leaderboard period"
+            value={period}
+            onChange={setPeriod}
+            options={PERIODS.map((p) => ({ value: p.key, label: p.label }))}
+          />
+        }
+      />
+
+      <div className="overflow-hidden rounded-2xl border border-surface bg-surface/40">
+        {loading ? (
+          <div className="flex flex-col items-center gap-3 p-14 text-sm text-muted">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            Refreshing the board…
+          </div>
+        ) : error ? (
+          <div role="alert" className="p-14 text-center text-sm font-semibold text-down">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-surface bg-background/50 font-mono text-[11px] uppercase tracking-wider text-muted-light">
+                <tr>
+                  <th className="px-4 py-3 font-semibold sm:px-5">#</th>
+                  <th className="px-3 py-3 font-semibold">Index</th>
+                  <th className="px-3 py-3 font-semibold">Path</th>
+                  <th className="px-3 py-3 text-right font-semibold">Return</th>
+                  <th className="hidden px-3 py-3 text-right font-semibold md:table-cell">
+                    Sharpe
+                  </th>
+                  <th className="hidden px-3 py-3 text-right font-semibold lg:table-cell">
+                    Volatility
+                  </th>
+                  <th className="hidden px-3 py-3 text-right font-semibold lg:table-cell">
+                    Max drawdown
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold sm:px-5">Open</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => {
+                  const up = (row.changePct ?? 0) >= 0;
+                  return (
+                    <tr
+                      key={row.slug}
+                      className="border-b border-surface/70 last:border-0 hover:bg-surface/30"
+                    >
+                      <td className="px-4 py-3 sm:px-5">
+                        <span
+                          className={`grid h-7 w-7 place-items-center rounded-lg font-mono text-xs font-black ${
+                            RANK_STYLES[index] ?? "text-muted-light"
+                          }`}
+                        >
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="font-bold text-foreground">
+                          {row.name}
+                        </span>
+                        {row.custom && (
+                          <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent">
+                            YOU
+                          </span>
+                        )}
+                        {row.custom && row.creatorUsername && (
+                          <Link
+                            href={`/user/${row.creatorUsername}`}
+                            className="mt-0.5 block text-[11px] text-muted transition hover:text-accent"
+                          >
+                            by @{row.creatorUsername}
+                          </Link>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="w-28">
+                          <Sparkline
+                            points={row.points}
+                            color={up ? "#588157" : "#a63d40"}
+                            width={112}
+                            height={32}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <ChangePill value={row.changePct} />
+                      </td>
+                      <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-muted md:table-cell">
+                        {row.risk.sharpe?.toFixed(2) ?? "—"}
+                      </td>
+                      <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-muted lg:table-cell">
+                        {row.risk.volatility?.toFixed(2) ?? "—"}%
+                      </td>
+                      <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-down lg:table-cell">
+                        {row.risk.maxDrawdown?.toFixed(2) ?? "—"}%
+                      </td>
+                      <td className="px-4 py-3 text-right sm:px-5">
+                        <Link
+                          href={
+                            row.custom
+                              ? `/compare?left=${row.slug}`
+                              : `/index/${row.slug}`
+                          }
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-accent transition hover:gap-1.5"
+                        >
+                          View
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-5 text-xs leading-relaxed text-muted-light">
+        Risk metrics use the available observations, annualized from their
+        sampling interval. Sharpe assumes a 0% risk-free rate. Data via Yahoo
+        Finance, delayed.
+      </p>
+    </main>
+  );
 }

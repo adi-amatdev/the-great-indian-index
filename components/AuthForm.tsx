@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { loginAction, registerAction, type AuthState } from "@/app/actions";
+import Segmented from "./ui/Segmented";
+import Panel from "./ui/Panel";
 
 export default function AuthForm() {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -20,64 +22,83 @@ export default function AuthForm() {
   const error = (isLogin ? loginState : regState)?.error;
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-surface bg-surface/40 p-6">
-      <div className="mb-5 grid grid-cols-2 gap-1 rounded-full border border-surface bg-background p-1 text-sm">
-        {(["login", "register"] as const).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`rounded-full py-1.5 font-semibold transition ${
-              mode === m ? "bg-accent text-white" : "text-muted hover:text-foreground"
-            }`}
-          >
-            {m === "login" ? "Log in" : "Sign up"}
-          </button>
-        ))}
-      </div>
+    <Panel label="Account access" context="paper trading only" bodyClassName="p-5 sm:p-6">
+      <Segmented<"login" | "register">
+        label="Auth mode"
+        value={mode}
+        onChange={setMode}
+        className="mb-5 w-full"
+        options={[
+          { value: "login", label: "Log in" },
+          { value: "register", label: "Sign up · get ₹10,00,000" },
+        ]}
+      />
 
-      <form action={action} className="space-y-3">
+      <form action={action} className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs text-muted">Username</label>
+          <label
+            htmlFor="username"
+            className="mb-1.5 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted"
+          >
+            Username
+          </label>
           <input
+            id="username"
             name="username"
             autoComplete="username"
             required
-            className="w-full rounded-lg border border-surface bg-background px-3 py-2 text-foreground outline-none focus:border-accent"
             placeholder="e.g. rakesh_jj"
+            className="w-full rounded-xl border border-surface bg-background px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-light focus:border-accent"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-muted">Password</label>
+          <label
+            htmlFor="password"
+            className="mb-1.5 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted"
+          >
+            Password
+          </label>
           <input
+            id="password"
             name="password"
             type="password"
             autoComplete={isLogin ? "current-password" : "new-password"}
             required
             minLength={6}
-            className="w-full rounded-lg border border-surface bg-background px-3 py-2 text-foreground outline-none focus:border-accent"
-            placeholder="at least 6 characters"
+            placeholder={isLogin ? "your password" : "at least 6 characters"}
+            className="w-full rounded-xl border border-surface bg-background px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-light focus:border-accent"
           />
         </div>
 
-        {error && <p className="text-sm text-down">{error}</p>}
+        {error && (
+          <p
+            role="alert"
+            className="rounded-xl bg-down-bg px-3.5 py-2.5 text-sm font-semibold text-down"
+          >
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-xl bg-accent px-4 py-2.5 font-semibold text-white transition hover:bg-accent-hover disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
+          {pending && (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          )}
           {pending
-            ? "\u2026"
+            ? "Working…"
             : isLogin
               ? "Log in"
-              : "Create account \u00B7 get \u20B910,00,000"}
+              : "Create account · get ₹10,00,000"}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-[11px] text-muted-light">
+      <p className="mt-5 border-t border-surface pt-4 text-center text-[11px] leading-relaxed text-muted-light">
         Accounts are for paper trading only. Don&apos;t reuse a real password.
         This is a demo app.
       </p>
-    </div>
+    </Panel>
   );
 }

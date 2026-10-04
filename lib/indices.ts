@@ -40,6 +40,8 @@ export type IndexDef = {
   constituents: Constituent[];
   /** A user-created index uses this flag to select its explicit weights. */
   custom?: boolean;
+  /** Username of the creator (only set on custom indexes). */
+  creatorUsername?: string;
 };
 
 export const INDICES: IndexDef[] = [

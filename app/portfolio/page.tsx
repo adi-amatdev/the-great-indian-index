@@ -7,12 +7,30 @@ import { getCustomIndexForUser } from "@/lib/custom-indexes";
 import { getSpotPrice, Weighting } from "@/lib/yahoo";
 import { logoutAction } from "@/app/actions";
 import IndexIcon from "@/components/IndexIcon";
+import PageHeader from "@/components/ui/PageHeader";
+import StatCard from "@/components/ui/StatCard";
+import ChangePill from "@/components/ui/ChangePill";
+import { ArrowRight, LogOut } from "@/components/ui/icons";
 
 export const metadata = { title: "Portfolio - Bharat Indexes" };
 export const dynamic = "force-dynamic";
 
 function inr(v: number, dp = 0) {
-  return `\u20B9${v.toLocaleString("en-IN", { maximumFractionDigits: dp, minimumFractionDigits: dp })}`;
+  return `₹${v.toLocaleString("en-IN", { maximumFractionDigits: dp, minimumFractionDigits: dp })}`;
+}
+
+const WEIGHT_LABEL: Record<string, string> = {
+  equal: "Equal",
+  mcap: "M-cap",
+  custom: "Custom",
+};
+
+function WeightChip({ weighting }: { weighting: string }) {
+  return (
+    <span className="inline-flex rounded-full border border-surface bg-background px-2 py-0.5 font-mono text-[11px] font-semibold text-muted">
+      {WEIGHT_LABEL[weighting] ?? weighting}
+    </span>
+  );
 }
 
 export default async function PortfolioPage() {
@@ -26,10 +44,8 @@ export default async function PortfolioPage() {
 
   const priced = await Promise.all(
     positions.map(async (p) => {
-      const def = getIndex(p.slug) ?? await getCustomIndexForUser(user.id, p.slug);
-      const spot = def
-        ? await getSpotPrice(def, p.weighting as Weighting)
-        : null;
+      const def = getIndex(p.slug) ?? (await getCustomIndexForUser(user.id, p.slug));
+      const spot = def ? await getSpotPrice(def, p.weighting as Weighting) : null;
       const value = spot != null ? p.units * spot : 0;
       const pl = value - p.cost;
       return { p, def, spot, value, pl };
@@ -42,98 +58,128 @@ export default async function PortfolioPage() {
   const overallPct = ((netWorth - startWorth) / startWorth) * 100;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:py-12">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground">
-            @{user.username}&apos;s portfolio
-          </h1>
-          <p className="text-sm text-muted">Paper trading account</p>
-        </div>
-        <form action={logoutAction}>
-          <button className="rounded-full border border-surface bg-surface/50 px-4 py-2 text-sm text-muted transition hover:bg-surface-hover hover:text-foreground">
-            Log out
-          </button>
-        </form>
-      </div>
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 sm:py-12">
+      <PageHeader
+        eyebrow={`Paper trading · @${user.username}`}
+        title="Portfolio"
+        description="Net worth, holdings and trade history for your virtual account."
+        aside={
+          <form action={logoutAction}>
+            <button className="inline-flex items-center gap-1.5 rounded-full border border-surface bg-background px-4 py-2 text-sm font-semibold text-muted transition hover:border-accent hover:text-foreground">
+              <LogOut className="h-3.5 w-3.5" />
+              Log out
+            </button>
+          </form>
+        }
+      />
 
-      {/* Summary */}
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Net worth" value={inr(netWorth)} />
-        <Stat label="Cash" value={inr(user.cash)} />
-        <Stat label="Holdings" value={inr(holdingsValue)} />
-        <Stat
+      {/* Summary strip */}
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label="Net worth"
+          value={inr(netWorth)}
+          hint={`started with ${inr(startWorth)}`}
+        />
+        <StatCard label="Cash" value={inr(user.cash)} hint="available to invest" />
+        <StatCard label="Holdings" value={inr(holdingsValue)} hint="marked at live unit price" />
+        <StatCard
           label="Total return"
           value={`${overallPct >= 0 ? "+" : ""}${overallPct.toFixed(2)}%`}
           tone={overallPct >= 0 ? "up" : "down"}
+          hint={`${overallPct >= 0 ? "+" : "−"}${inr(Math.abs(netWorth - startWorth))}`}
         />
       </section>
 
       {/* Holdings */}
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-bold text-foreground">Holdings</h2>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-bold text-foreground">
+            Holdings
+            <span className="ml-2 text-sm font-normal text-muted-light">
+              {priced.length} position{priced.length === 1 ? "" : "s"}
+            </span>
+          </h2>
+          <span className="hidden font-mono text-[11px] text-muted-light sm:inline">
+            live unit prices
+          </span>
+        </div>
+
         {priced.length === 0 ? (
-          <div className="rounded-2xl border border-surface bg-surface/30 p-8 text-center text-muted">
-            No positions yet.{" "}
-            <Link href="/" className="text-accent font-medium underline">
-              Browse indexes
-            </Link>{" "}
-            and buy your first basket.
+          <div className="rounded-2xl border border-dashed border-surface p-10 text-center">
+            <p className="text-sm text-muted">
+              No positions yet.{" "}
+              <Link href="/" className="font-semibold text-accent hover:underline">
+                Browse indexes
+              </Link>{" "}
+              and buy your first basket.
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-surface">
-            <table className="w-full text-sm">
-              <thead className="bg-surface/60 text-left text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Index</th>
-                  <th className="px-4 py-3 font-medium">Weighting</th>
-                  <th className="px-4 py-3 text-right font-medium">Units</th>
-                  <th className="px-4 py-3 text-right font-medium">Invested</th>
-                  <th className="px-4 py-3 text-right font-medium">Value</th>
-                  <th className="px-4 py-3 text-right font-medium">P/L</th>
-                </tr>
-              </thead>
-              <tbody>
-                {priced.map(({ p, def, value, pl }) => {
-                  const plPct = p.cost > 0 ? (pl / p.cost) * 100 : 0;
-                  return (
-                    <tr
-                      key={`${p.slug}-${p.weighting}`}
-                      className="border-t border-surface hover:bg-surface/30"
-                    >
-                      <td className="px-4 py-3 font-medium text-foreground">
-                        <Link
-                          href={`/index/${p.slug}`}
-                          className="inline-flex items-center gap-1.5 hover:underline"
-                        >
-                          {def && <IndexIcon slug={def.slug} className="w-5 h-5 text-accent" />}
-                          {def?.name ?? p.slug}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-muted">
-                        {p.weighting === "mcap" ? "Market cap" : p.weighting === "custom" ? "Custom weights" : "Equal wt"}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-foreground">
-                        {p.units.toFixed(4)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-foreground">
-                        {inr(p.cost)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-foreground">
-                        {inr(value)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-right font-mono font-semibold ${pl >= 0 ? "text-up" : "text-down"}`}
+          <div className="overflow-hidden rounded-2xl border border-surface bg-surface/40">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead className="border-b border-surface bg-background/50 font-mono text-[11px] uppercase tracking-wider text-muted-light">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold sm:px-5">Index</th>
+                    <th className="px-3 py-3 font-semibold">Weighting</th>
+                    <th className="hidden px-3 py-3 text-right font-semibold sm:table-cell">
+                      Units
+                    </th>
+                    <th className="px-3 py-3 text-right font-semibold">Invested</th>
+                    <th className="px-3 py-3 text-right font-semibold">Value</th>
+                    <th className="px-4 py-3 text-right font-semibold sm:px-5">P/L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {priced.map(({ p, def, value, pl }) => {
+                    const plPct = p.cost > 0 ? (pl / p.cost) * 100 : 0;
+                    return (
+                      <tr
+                        key={`${p.slug}-${p.weighting}`}
+                        className="border-b border-surface/70 last:border-0 hover:bg-surface/30"
                       >
-                        {pl >= 0 ? "+" : ""}
-                        {inr(pl)} ({plPct >= 0 ? "+" : ""}
-                        {plPct.toFixed(1)}%)
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td className="px-4 py-3 sm:px-5">
+                          <Link
+                            href={`/index/${p.slug}`}
+                            className="group inline-flex items-center gap-2 font-semibold text-foreground"
+                          >
+                            {def && (
+                              <IndexIcon slug={def.slug} className="h-4 w-4 text-accent" />
+                            )}
+                            <span className="group-hover:underline">
+                              {def?.name ?? p.slug}
+                            </span>
+                            <ArrowRight className="h-3 w-3 text-muted-light transition group-hover:text-accent" />
+                          </Link>
+                        </td>
+                        <td className="px-3 py-3">
+                          <WeightChip weighting={p.weighting} />
+                        </td>
+                        <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-muted sm:table-cell">
+                          {p.units.toFixed(4)}
+                        </td>
+                        <td className="px-3 py-3 text-right font-mono tabular-nums text-foreground">
+                          {inr(p.cost)}
+                        </td>
+                        <td className="px-3 py-3 text-right font-mono tabular-nums text-foreground">
+                          {inr(value)}
+                        </td>
+                        <td className="px-4 py-3 text-right sm:px-5">
+                          <ChangePill
+                            value={plPct}
+                            suffix="%"
+                          />
+                          <div className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
+                            {pl >= 0 ? "+" : ""}
+                            {inr(pl)}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
@@ -141,94 +187,87 @@ export default async function PortfolioPage() {
       {/* Trade history */}
       {trades.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 text-lg font-bold text-foreground">Recent trades</h2>
-          <div className="overflow-x-auto rounded-2xl border border-surface">
-            <table className="w-full text-sm">
-              <thead className="bg-surface/60 text-left text-muted">
-                <tr>
-                  <th className="px-4 py-3 font-medium">When</th>
-                  <th className="px-4 py-3 font-medium">Index</th>
-                  <th className="px-4 py-3 font-medium">Side</th>
-                  <th className="px-4 py-3 text-right font-medium">Units</th>
-                  <th className="px-4 py-3 text-right font-medium">Price</th>
-                  <th className="px-4 py-3 text-right font-medium">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trades.map((t) => {
-                  const def = getIndex(t.slug);
-                  return (
-                    <tr key={Number(t.id)} className="border-t border-surface">
-                      <td className="px-4 py-3 text-muted">
-                        {new Date(Number(t.ts)).toLocaleString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </td>
-                      <td className="px-4 py-3 text-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          {def && <IndexIcon slug={def.slug} className="w-5 h-5 text-accent" />}
-                          {def?.name ?? t.slug}
-                        </span>
-                        <span className="ml-1 text-xs text-muted-light">
-                      {t.weighting === "mcap" ? "\u00B7 mcap" : t.weighting === "custom" ? "\u00B7 custom" : "\u00B7 eq"}
-                        </span>
-                      </td>
-                      <td
-                        className={`px-4 py-3 font-semibold uppercase ${t.side === "buy" ? "text-up" : "text-down"}`}
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h2 className="text-lg font-bold text-foreground">
+              Recent trades
+              <span className="ml-2 text-sm font-normal text-muted-light">
+                latest {trades.length}
+              </span>
+            </h2>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-surface bg-surface/40">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px] text-sm">
+                <thead className="border-b border-surface bg-background/50 font-mono text-[11px] uppercase tracking-wider text-muted-light">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold sm:px-5">When</th>
+                    <th className="px-3 py-3 font-semibold">Index</th>
+                    <th className="px-3 py-3 font-semibold">Side</th>
+                    <th className="hidden px-3 py-3 text-right font-semibold sm:table-cell">
+                      Units
+                    </th>
+                    <th className="px-3 py-3 text-right font-semibold">Price</th>
+                    <th className="px-4 py-3 text-right font-semibold sm:px-5">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trades.map((t) => {
+                    const def = getIndex(t.slug);
+                    return (
+                      <tr
+                        key={Number(t.id)}
+                        className="border-b border-surface/70 last:border-0 hover:bg-surface/30"
                       >
-                        {t.side}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-foreground">
-                        {t.units.toFixed(4)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-foreground">
-                        {inr(t.price, 2)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-foreground">
-                        {inr(t.amount, 2)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td className="px-4 py-3 whitespace-nowrap font-mono text-xs tabular-nums text-muted sm:px-5">
+                          {new Date(Number(t.ts)).toLocaleString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+                            {def && (
+                              <IndexIcon slug={def.slug} className="h-4 w-4 text-accent" />
+                            )}
+                            {def?.name ?? t.slug}
+                          </span>
+                          <span className="ml-1.5">
+                            <WeightChip weighting={t.weighting} />
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${
+                              t.side === "buy" ? "bg-up-bg text-up" : "bg-down-bg text-down"
+                            }`}
+                          >
+                            {t.side}
+                          </span>
+                        </td>
+                        <td className="hidden px-3 py-3 text-right font-mono tabular-nums text-muted sm:table-cell">
+                          {t.units.toFixed(4)}
+                        </td>
+                        <td className="px-3 py-3 text-right font-mono tabular-nums text-foreground">
+                          {inr(t.price, 2)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums text-foreground sm:px-5">
+                          {inr(t.amount, 2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       )}
 
       <footer className="mt-12 text-center text-xs text-muted-light">
-        Paper money only &middot; started with {inr(startWorth)} &middot; not investment advice.
+        Paper money only · started with {inr(startWorth)} · not investment advice.
       </footer>
     </main>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "up" | "down";
-}) {
-  return (
-    <div className="rounded-2xl border border-surface bg-surface/30 p-4">
-      <div className="text-xs text-muted">{label}</div>
-      <div
-        className={`mt-1 font-mono text-xl font-bold ${
-          tone === "up"
-            ? "text-up"
-            : tone === "down"
-              ? "text-down"
-              : "text-foreground"
-        }`}
-      >
-        {value}
-      </div>
-    </div>
   );
 }

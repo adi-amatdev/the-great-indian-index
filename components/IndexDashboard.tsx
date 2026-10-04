@@ -5,9 +5,25 @@ import type { IndexData, RangeKey, Weighting } from "@/lib/yahoo";
 import IndexChart from "./IndexChart";
 import ReturnsCalculator from "./ReturnsCalculator";
 import TradePanel from "./TradePanel";
-import { fmtLevel, fmtPct } from "@/lib/format";
+import Panel from "./ui/Panel";
+import StatCard from "./ui/StatCard";
+import Segmented from "./ui/Segmented";
+import { fmtLevel } from "@/lib/format";
+import { fmtISTDateTime } from "@/lib/market";
+import MarketStatus, { useMarketStatus } from "./MarketStatus";
+import { ArrowDown, ArrowUp } from "./ui/icons";
 
 const RANGE_KEYS: RangeKey[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"];
+const WEIGHT_LABEL: Record<string, string> = {
+  equal: "Equal weight",
+  mcap: "Market cap",
+  custom: "Custom weights",
+};
+
+function inr(v: number | null, dp = 0) {
+  if (v == null) return "-";
+  return `₹${v.toLocaleString("en-IN", { maximumFractionDigits: dp, minimumFractionDigits: dp })}`;
+}
 
 export type Positions = {
   equal: { units: number; cost: number } | null;
@@ -58,74 +74,105 @@ export default function IndexDashboard({
   }, [range, weighting, slug]);
 
   const up = (data.changePct ?? 0) >= 0;
+  const market = useMarketStatus();
+  const weightOptions = (
+    ["equal", "mcap", ...(initial.weighting === "custom" ? ["custom"] : [])] as Weighting[]
+  ).map((w) => ({
+    value: w,
+    label: w === "equal" ? "Equal" : w === "mcap" ? "M-cap" : "Custom",
+    title: WEIGHT_LABEL[w],
+  }));
 
   return (
-    <div>
-      {/* Level + change */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="font-mono text-4xl font-black text-foreground">
-            {fmtLevel(data.level)}
+    <div className="space-y-4">
+      {/* Stat strip */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          label={`Level · ${range}`}
+          value={fmtLevel(data.level)}
+          hint="rebased to 100 at range start"
+        />
+        <div className="relative overflow-hidden rounded-2xl border border-surface bg-surface/40 p-4">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+            Range move
           </div>
           <div
-            className={`mt-1 inline-flex rounded-full px-3 py-1 text-sm font-bold ${
-              up ? "bg-up-bg text-up" : "bg-down-bg text-down"
+            className={`mt-1.5 flex items-baseline gap-1.5 font-mono text-xl font-bold tabular-nums ${
+              up ? "text-up" : "text-down"
             }`}
           >
-            {up ? "\u25B2" : "\u25BC"} {fmtPct(data.changePct)} &middot; {range}
+            {up ? <ArrowUp className="h-4 w-4 self-center" /> : <ArrowDown className="h-4 w-4 self-center" />}
+            {fmtLevel(data.changePct)}%
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-light">
+            {WEIGHT_LABEL[weighting]} · over {range}
           </div>
         </div>
+        <StatCard
+          label="Basket unit price"
+          value={inr(data.spot)}
+          hint="what a paper trade buys at"
+        />
+        <StatCard
+          label="Live constituents"
+          value={`${data.ok}/${data.total}`}
+          tone={data.ok === data.total ? "up" : data.ok > 0 ? "accent" : "down"}
+          hint={data.ok === data.total ? "all quotes streaming" : "some quotes delayed"}
+        />
+      </div>
 
-        {/* Weighting toggle */}
-        <div className="inline-flex rounded-full border border-surface bg-background p-1 text-sm">
-          {(["equal", "mcap", ...(initial.weighting === "custom" ? ["custom"] : [])] as Weighting[]).map((w) => (
-            <button
-              key={w}
-              onClick={() => setWeighting(w)}
-              className={`rounded-full px-3 py-1 font-semibold transition ${
-                weighting === w
-                  ? "bg-accent text-white"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              {w === "equal" ? "Equal weight" : w === "mcap" ? "Market cap" : "Custom weights"}
-            </button>
-          ))}
+      {/* Chart panel */}
+      <Panel
+        label="Price action"
+        context={
+          <span className="inline-flex items-center gap-3">
+            <MarketStatus dot={false} />
+            {loading && (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            )}
+            <span>
+              {range} · {WEIGHT_LABEL[weighting]}
+            </span>
+          </span>
+        }
+        bodyClassName="p-3 sm:p-4"
+      >
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <Segmented<Weighting>
+            label="Weighting"
+            value={weighting}
+            onChange={setWeighting}
+            options={weightOptions}
+            size="sm"
+          />
+          <Segmented<RangeKey>
+            label="Range"
+            value={range}
+            onChange={setRange}
+            options={RANGE_KEYS.map((key) => ({ value: key, label: key }))}
+            size="sm"
+          />
         </div>
-      </div>
 
-      {/* Range toggle */}
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {RANGE_KEYS.map((k) => (
-          <button
-            key={k}
-            onClick={() => setRange(k)}
-            className={`rounded-full px-3 py-1 text-sm font-semibold transition ${
-              range === k
-                ? "bg-accent text-white"
-                : "bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
-            }`}
-          >
-            {k}
-          </button>
-        ))}
-        {loading && (
-          <span className="ml-2 self-center text-xs text-muted">loading\u2026</span>
-        )}
-      </div>
+        <div className={`transition-opacity ${loading ? "opacity-60" : "opacity-100"}`}>
+          <IndexChart
+            points={data.points}
+            range={range}
+            changePct={data.changePct}
+          />
+        </div>
 
-      <IndexChart
-        points={data.points}
-        range={range}
-        changePct={data.changePct}
-      />
-      <p className="mt-2 text-center text-xs text-muted">
-        {weighting === "mcap" ? "Market-cap weighted" : "Equal weighted"} &middot;
-        rebased to 100 at range start &middot; {data.ok}/{data.total} constituents live
-      </p>
+        <p className="mt-2 text-center font-mono text-[11px] text-muted-light">
+          {WEIGHT_LABEL[weighting]} · rebased to 100 · {data.ok}/{data.total}{" "}
+          constituents live
+          {!market.open && data.asOf
+            ? ` · last close ${fmtISTDateTime(data.asOf)}`
+            : ""}
+        </p>
+      </Panel>
 
       {/* Calculator + trade */}
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <ReturnsCalculator changePct={data.changePct} range={range} />
         <TradePanel
           slug={slug}

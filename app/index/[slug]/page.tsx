@@ -3,12 +3,15 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getIndex, INDICES } from "@/lib/indices";
 import { getCustomIndexForUser } from "@/lib/custom-indexes";
-import { getIndexData } from "@/lib/yahoo";
+import { getCachedIndexData } from "@/lib/index-cache";
 import { getCurrentUser } from "@/lib/auth";
 import { getPosition } from "@/lib/portfolio";
 import IndexDashboard, { Positions } from "@/components/IndexDashboard";
 import IndexIcon from "@/components/IndexIcon";
 import ConstituentsTable from "@/components/ConstituentsTable";
+import Panel from "@/components/ui/Panel";
+import PageHeader from "@/components/ui/PageHeader";
+import { ArrowLeft, ArrowRight } from "@/components/ui/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +39,8 @@ export default async function IndexPage({
 
   const [[data, data3M]] = await Promise.all([
     Promise.all([
-      getIndexData(def, "1D", def.custom ? "custom" : "equal"),
-      getIndexData(def, "3M", def.custom ? "custom" : "equal"),
+      getCachedIndexData(def, "1D", def.custom ? "custom" : "equal"),
+      getCachedIndexData(def, "3M", def.custom ? "custom" : "equal"),
     ]),
   ]);
 
@@ -55,109 +58,126 @@ export default async function IndexPage({
     };
   }
 
+  const others = INDICES.filter((i) => i.slug !== def.slug);
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:py-12">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-5 sm:py-12">
       <Link
         href="/"
-        className="inline-flex items-center gap-1 text-sm text-muted transition hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition hover:text-foreground"
       >
-        &larr; All indexes
+        <ArrowLeft className="h-3.5 w-3.5" />
+        All indexes
       </Link>
 
-      {/* Hero */}
-      <section className="relative mt-4 overflow-hidden rounded-2xl border border-surface bg-surface/50 p-6 sm:p-8">
-        <div className="flex items-center gap-4">
-          <IndexIcon
-            slug={def.slug}
-            className="w-12 h-12 text-accent"
-          />
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-              {def.name}
-            </h1>
-            <p className="text-muted">{def.tagline}</p>
-          </div>
-        </div>
+      <PageHeader
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            <IndexIcon slug={def.slug} className="h-4 w-4 text-accent" />
+            {def.custom ? "Your custom basket" : "Bharat Index"}
+          </span>
+        }
+        title={def.name}
+        description={def.blurb}
+        aside={
+          def.custom ? (
+            <Link
+              href="/custom"
+              className="rounded-full border border-surface bg-background px-4 py-2 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent"
+            >
+              Edit basket
+            </Link>
+          ) : undefined
+        }
+      />
 
-        <p className="mt-5 max-w-3xl text-sm leading-relaxed text-muted">
-          {def.blurb}
-        </p>
-
-        <div className="mt-6">
-          <IndexDashboard
-            slug={def.slug}
-            initial={data}
-            loggedIn={!!user}
-            cash={user ? user.cash : null}
-            positions={positions}
-          />
-        </div>
-      </section>
+      <IndexDashboard
+        slug={def.slug}
+        initial={data}
+        loggedIn={!!user}
+        cash={user ? user.cash : null}
+        positions={positions}
+      />
 
       {/* Why this index exists */}
-      <section className="mt-8 rounded-2xl border border-surface bg-surface/50 p-6 sm:p-8">
-        <h2 className="text-lg font-bold text-foreground">
-          Why this index exists
-        </h2>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted">
-          {def.thesis}
-        </p>
-        {def.sources.length > 0 && (
-          <ul className="mt-4 flex flex-col gap-1.5">
-            {def.sources.map((s) => (
-              <li key={s.url} className="text-sm">
-                <a
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted transition hover:text-accent"
-                >
-                  <span className="text-foreground">{s.title}</span>{" "}
-                  <span className="text-muted-light">
-                    &middot; {s.outlet} &middot; {s.date}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="mt-4 text-xs text-muted-light">
-          Sources cited for how this theme is moving in the news &mdash; an
-          index is a lens on a story, not a recommendation.
-        </p>
+      <section className="mt-10">
+        <Panel
+          label="The story"
+          context={`${def.tagline}`}
+          bodyClassName="p-5 sm:p-6"
+        >
+          <p className="max-w-3xl text-[15px] leading-relaxed text-foreground/80">
+            {def.thesis}
+          </p>
+          {def.sources.length > 0 && (
+            <ul className="mt-5 space-y-2">
+              {def.sources.map((s) => (
+                <li key={s.url} className="text-sm">
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group inline-flex max-w-full flex-wrap items-baseline gap-x-2 rounded-lg px-1 py-0.5 transition hover:bg-surface/60"
+                  >
+                    <span className="font-semibold text-foreground group-hover:text-accent">
+                      {s.title}
+                    </span>
+                    <span className="text-muted-light">
+                      {s.outlet} · {s.date}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-5 border-t border-surface pt-4 text-xs text-muted-light">
+            Sources cited for how this theme is moving in the news — an index is
+            a lens on a story, not a recommendation.
+          </p>
+        </Panel>
       </section>
 
       {/* Constituents */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-lg font-bold text-foreground">
-          Constituents{" "}
-          <span className="text-sm font-normal text-muted-light">
-            ({def.constituents.length} stocks &middot; selectable performance window)
+      <section className="mt-10">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-bold text-foreground">
+            Constituents
+            <span className="ml-2 text-sm font-normal text-muted-light">
+              {def.constituents.length} stocks
+            </span>
+          </h2>
+          <span className="hidden font-mono text-[11px] text-muted-light sm:inline">
+            selectable performance window
           </span>
-        </h2>
+        </div>
         <ConstituentsTable slug={def.slug} initial={data3M} />
       </section>
 
       {/* Other indexes */}
-      <section className="mt-10">
-        <h2 className="mb-3 text-lg font-bold text-foreground">Explore other indexes</h2>
-        <div className="flex flex-wrap gap-2">
-          {INDICES.filter((i) => i.slug !== def.slug).map((i) => (
-            <Link
-              key={i.slug}
-              href={`/index/${i.slug}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-surface bg-surface/40 px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-accent"
-            >
-              <IndexIcon slug={i.slug} className="w-4 h-4 text-accent" />
-              {i.name.replace(" Index", "")}
-            </Link>
-          ))}
-        </div>
-      </section>
+      {others.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-3 text-lg font-bold text-foreground">
+            Explore other indexes
+          </h2>
+          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {others.map((i) => (
+              <Link
+                key={i.slug}
+                href={`/index/${i.slug}`}
+                className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-surface bg-background/60 py-1.5 pl-2.5 pr-3 text-sm text-muted transition hover:border-accent hover:text-foreground"
+              >
+                <IndexIcon slug={i.slug} className="h-4 w-4 text-accent" />
+                {i.name.replace(" Index", "")}
+                <ArrowRight className="h-3 w-3 text-muted-light transition group-hover:text-accent" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <footer className="mt-12 text-center text-xs text-muted-light">
-        Data via Yahoo Finance (NSE, delayed) &middot; rebased to 100 &middot; paper money only
-        &middot; not investment advice.
+        Data via Yahoo Finance (NSE, delayed) · rebased to 100 · paper money
+        only · not investment advice.
       </footer>
     </main>
   );
