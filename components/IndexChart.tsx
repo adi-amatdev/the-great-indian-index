@@ -250,7 +250,7 @@ export default function IndexChart({
       )}
       {!marketOpen && asOf && (
         <div className="absolute bottom-2 right-3 rounded-full border border-surface bg-background/90 px-2.5 py-1 font-mono text-[10px] font-semibold text-muted backdrop-blur">
-          Last close · {fmtISTDateTime(asOf)} IST
+          No live points · latest close {fmtISTDateTime(asOf)} IST
         </div>
       )}
     </div>

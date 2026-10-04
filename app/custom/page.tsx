@@ -13,6 +13,7 @@ import {
 } from "@/lib/custom-indexes";
 import { buildCatalog } from "@/lib/catalog";
 import CollaboratorManager from "@/components/CollaboratorManager";
+import DeleteCustomIndexButton from "@/components/DeleteCustomIndexButton";
 import { ArrowRight } from "@/components/ui/icons";
 
 export const dynamic = "force-dynamic";
@@ -137,12 +138,7 @@ export default async function CustomIndexesPage() {
                       />
                     </div>
                   </details>
-                  <form action={deleteCustomIndex}>
-                    <input type="hidden" name="id" value={index.slug} />
-                    <button className="text-sm font-bold text-down transition hover:underline">
-                      Delete index
-                    </button>
-                  </form>
+                  <DeleteCustomIndexButton action={deleteCustomIndex} slug={index.slug} />
                 </div>
               </article>
             ))}

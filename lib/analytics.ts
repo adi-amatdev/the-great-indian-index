@@ -1,6 +1,7 @@
 import type { IndexData, SeriesPoint } from "./yahoo";
 
 export type RiskMetrics = {
+  annualizedReturn: number | null;
   volatility: number | null;
   sharpe: number | null;
   sortino: number | null;
@@ -18,7 +19,7 @@ function returns(points: SeriesPoint[]) {
 
 export function riskMetrics(points: SeriesPoint[]): RiskMetrics {
   const daily = returns(points);
-  if (daily.length < 2) return { volatility: null, sharpe: null, sortino: null, maxDrawdown: null };
+  if (daily.length < 2) return { annualizedReturn: null, volatility: null, sharpe: null, sortino: null, maxDrawdown: null };
   const gaps = points.slice(1).map((point, index) => point.t - points[index].t).filter((gap) => gap > 0).sort((a, b) => a - b);
   const medianGap = gaps[Math.floor(gaps.length / 2)] ?? 86_400;
   const periodsPerYear = Math.max(1, 31_536_000 / medianGap);
@@ -35,6 +36,7 @@ export function riskMetrics(points: SeriesPoint[]): RiskMetrics {
     if (peak > 0) maxDrawdown = Math.min(maxDrawdown, (point.v / peak - 1) * 100);
   }
   return {
+    annualizedReturn: annualizedReturn * 100,
     volatility,
     sharpe: volatility ? (annualizedReturn / (volatility / 100)) : null,
     sortino: downsideDeviation ? annualizedReturn / downsideDeviation : null,

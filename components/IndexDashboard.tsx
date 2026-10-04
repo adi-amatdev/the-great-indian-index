@@ -12,6 +12,7 @@ import { fmtLevel } from "@/lib/format";
 import { fmtISTDateTime } from "@/lib/market";
 import MarketStatus, { useMarketStatus } from "./MarketStatus";
 import { ArrowDown, ArrowUp } from "./ui/icons";
+import { riskMetrics } from "@/lib/analytics";
 
 const RANGE_KEYS: RangeKey[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"];
 const WEIGHT_LABEL: Record<string, string> = {
@@ -75,6 +76,7 @@ export default function IndexDashboard({
 
   const up = (data.changePct ?? 0) >= 0;
   const market = useMarketStatus();
+  const risk = riskMetrics(data.points);
   const weightOptions = (
     ["equal", "mcap", ...(initial.weighting === "custom" ? ["custom"] : [])] as Weighting[]
   ).map((w) => ({
@@ -168,8 +170,31 @@ export default function IndexDashboard({
           {WEIGHT_LABEL[weighting]} · rebased to 100 · {data.ok}/{data.total}{" "}
           constituents live
           {!market.open && data.asOf
-            ? ` · last close ${fmtISTDateTime(data.asOf)}`
+            ? ` · no live points today · latest trading close ${fmtISTDateTime(data.asOf)}`
             : ""}
+        </p>
+      </Panel>
+
+      <Panel label="Risk / return" context={`${range} window`}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <StatCard
+            label="Return"
+            value={data.changePct == null ? "-" : `${data.changePct >= 0 ? "+" : ""}${data.changePct.toFixed(2)}%`}
+            tone={data.changePct == null ? "plain" : data.changePct >= 0 ? "up" : "down"}
+            hint={`observed over ${range}`}
+          />
+          <StatCard
+            label="Annualized return"
+            value={risk.annualizedReturn == null ? "-" : `${risk.annualizedReturn >= 0 ? "+" : ""}${risk.annualizedReturn.toFixed(2)}%`}
+            tone={risk.annualizedReturn == null ? "plain" : risk.annualizedReturn >= 0 ? "up" : "down"}
+            hint="annualized from observations"
+          />
+          <StatCard label="Volatility" value={risk.volatility == null ? "-" : `${risk.volatility.toFixed(2)}%`} hint="annualized variability" />
+          <StatCard label="Sharpe" value={risk.sharpe?.toFixed(2) ?? "-"} hint="return per risk unit" />
+          <StatCard label="Max drawdown" value={risk.maxDrawdown == null ? "-" : `${risk.maxDrawdown.toFixed(2)}%`} tone={risk.maxDrawdown != null && risk.maxDrawdown < 0 ? "down" : "plain"} hint="peak-to-trough loss" />
+        </div>
+        <p className="mt-3 text-[11px] leading-relaxed text-muted-light">
+          Metrics use the available chart observations. Sharpe assumes a 0% risk-free rate; they are research signals, not forecasts.
         </p>
       </Panel>
 
