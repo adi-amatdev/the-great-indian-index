@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import type { CatalogItem } from "@/lib/catalog";
 import type { CustomConstituentInput } from "@/lib/custom-indexes";
 import type { IndexSource } from "@/lib/indices";
+import SubmitButton from "./ui/SubmitButton";
 
 type ActionState = { error?: string } | undefined;
 type Action = (formData: FormData) => Promise<ActionState>;
@@ -360,9 +361,9 @@ export default function CustomIndexForm({
         <span className="text-xs text-muted-light">
           Saved baskets appear in Compare.
         </span>
-        <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-white transition hover:bg-accent-hover">
+        <SubmitButton pendingLabel="Saving…" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-white transition hover:bg-accent-hover">
           {id ? "Save changes" : "Create index"}
-        </button>
+        </SubmitButton>
       </div>
     </form>
   );

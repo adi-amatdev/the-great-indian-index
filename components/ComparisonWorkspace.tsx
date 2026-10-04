@@ -6,7 +6,7 @@ import type { IndexData, RangeKey, Weighting } from "@/lib/yahoo";
 import { fmtPct } from "@/lib/format";
 import { fmtISTDateTime } from "@/lib/market";
 import IndexChart from "./IndexChart";
-import MarketStatus from "./MarketStatus";
+import MarketStatus, { useMarketStatus } from "./MarketStatus";
 import Panel from "./ui/Panel";
 import PageHeader from "./ui/PageHeader";
 import Segmented from "./ui/Segmented";
@@ -223,6 +223,7 @@ function Pane({
   options,
   onChange,
   stale,
+  marketOpen,
 }: {
   side: "left" | "right";
   result: Result | null;
@@ -230,6 +231,7 @@ function Pane({
   options: IndexDef[];
   onChange: (value: string) => void;
   stale: boolean;
+  marketOpen: boolean;
 }) {
   return (
     <section
@@ -273,6 +275,8 @@ function Pane({
               points={result.points}
               range={result.range}
               changePct={result.changePct}
+              asOf={result.asOf}
+              marketOpen={marketOpen}
             />
           </div>
 
@@ -344,6 +348,7 @@ export default function ComparisonWorkspace({
       options.find((option) => option.slug === right)?.custom,
   );
   const benchmarkResult = payload?.benchmark;
+  const market = useMarketStatus();
   const benchmarkOptions = options.filter((option) =>
     option.slug.startsWith("benchmark-"),
   );
@@ -388,6 +393,7 @@ export default function ComparisonWorkspace({
             options={options}
             onChange={setLeft}
             stale={loading}
+            marketOpen={market.open}
           />
           <Pane
             side="right"
@@ -396,6 +402,7 @@ export default function ComparisonWorkspace({
             options={options}
             onChange={setRight}
             stale={loading}
+            marketOpen={market.open}
           />
         </div>
 

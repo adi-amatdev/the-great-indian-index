@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIndex } from "@/lib/indices";
 import { getCurrentUser } from "@/lib/auth";
-import { getCustomIndexForUser } from "@/lib/custom-indexes";
+import { getCustomIndexForUser, getPublicCustomIndex } from "@/lib/custom-indexes";
 import { getBenchmark } from "@/lib/benchmarks";
 import { resolveRange, resolveWeighting, type Weighting } from "@/lib/yahoo";
 import { getCachedIndexData } from "@/lib/index-cache";
 import { withRisk } from "@/lib/analytics";
 
 async function resolveDefinition(slug: string, userId: bigint | null) {
-  return getIndex(slug) ?? getBenchmark(slug) ?? (userId ? getCustomIndexForUser(userId, slug) : null);
+  return getIndex(slug) ?? getBenchmark(slug) ?? (userId ? await getCustomIndexForUser(userId, slug) : null) ?? getPublicCustomIndex(slug);
 }
 
 export async function GET(req: NextRequest) {

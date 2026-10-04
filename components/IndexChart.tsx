@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { RangeKey, SeriesPoint } from "@/lib/yahoo";
+import { fmtISTDateTime } from "@/lib/market";
 
 function fmtDate(t: number, range: RangeKey) {
   const d = new Date(t * 1000);
@@ -24,10 +25,14 @@ export default function IndexChart({
   points,
   range,
   changePct,
+  asOf,
+  marketOpen = true,
 }: {
   points: SeriesPoint[];
   range: RangeKey;
   changePct: number | null;
+  asOf?: number | null;
+  marketOpen?: boolean;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const up = (changePct ?? 0) >= 0;
@@ -241,6 +246,11 @@ export default function IndexChart({
           <div className="mt-0.5 text-[11px] tabular-nums text-muted">
             {fmtDate(hovered.t, range)}
           </div>
+        </div>
+      )}
+      {!marketOpen && asOf && (
+        <div className="absolute bottom-2 right-3 rounded-full border border-surface bg-background/90 px-2.5 py-1 font-mono text-[10px] font-semibold text-muted backdrop-blur">
+          Last close · {fmtISTDateTime(asOf)} IST
         </div>
       )}
     </div>

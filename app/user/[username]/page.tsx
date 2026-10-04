@@ -37,7 +37,7 @@ export default async function UserProfilePage({
 
   const profile = await prisma.user.findUnique({
     where: { username: username.toLowerCase() },
-    select: { id: true, username: true, bio: true, about: true, links: true, createdAt: true },
+    select: { id: true, username: true, email: true, bio: true, about: true, links: true, createdAt: true },
   });
   if (!profile) notFound();
 
@@ -115,6 +115,7 @@ export default async function UserProfilePage({
           {isSelf && (
             <ProfileEditForm
               bio={profile.bio ?? ""}
+              email={profile.email ?? ""}
               about={profile.about ?? ""}
               links={links}
             />

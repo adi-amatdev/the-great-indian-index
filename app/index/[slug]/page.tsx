@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getIndex, INDICES } from "@/lib/indices";
-import { getCustomIndexForUser } from "@/lib/custom-indexes";
+import { getCustomIndexForUser, getPublicCustomIndex } from "@/lib/custom-indexes";
 import { getCachedIndexData } from "@/lib/index-cache";
 import { getCurrentUser } from "@/lib/auth";
 import { getPosition } from "@/lib/portfolio";
@@ -22,7 +22,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const user = await getCurrentUser();
-  const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null);
+  const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null) ?? await getPublicCustomIndex(slug);
   if (!def) return { title: "Index not found" };
   return { title: `${def.name} - Bharat Indexes`, description: def.blurb };
 }
@@ -34,8 +34,9 @@ export default async function IndexPage({
 }) {
   const { slug } = await params;
   const user = await getCurrentUser();
-  const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null);
+  const def = getIndex(slug) ?? (user ? await getCustomIndexForUser(user.id, slug) : null) ?? await getPublicCustomIndex(slug);
   if (!def) notFound();
+  const canTrade = !def.custom || Boolean(user && await getCustomIndexForUser(user.id, slug));
 
   const [[data, data3M]] = await Promise.all([
     Promise.all([
@@ -94,7 +95,7 @@ export default async function IndexPage({
       <IndexDashboard
         slug={def.slug}
         initial={data}
-        loggedIn={!!user}
+        loggedIn={Boolean(user && canTrade)}
         cash={user ? user.cash : null}
         positions={positions}
       />

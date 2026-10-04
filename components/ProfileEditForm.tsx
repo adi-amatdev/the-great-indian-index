@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { updateProfileAction } from "@/app/actions";
 import Panel from "./ui/Panel";
+import SubmitButton from "./ui/SubmitButton";
 
 type State = { error?: string; ok?: boolean } | undefined;
 type LinkRow = { label: string; url: string };
@@ -10,14 +11,16 @@ const emptyLink: LinkRow = { label: "", url: "" };
 
 export default function ProfileEditForm({
   bio = "",
+  email = "",
   about = "",
   links = [],
 }: {
   bio?: string;
+  email?: string;
   about?: string;
   links?: LinkRow[];
 }) {
-  const [state, action, pending] = useActionState(
+  const [state, action] = useActionState(
     async (_prev: State, formData: FormData) => updateProfileAction(_prev, formData),
     undefined,
   );
@@ -38,6 +41,11 @@ export default function ProfileEditForm({
   return (
     <Panel label="Edit profile" context="only you can see this" bodyClassName="p-5">
       <form action={action} className="space-y-3">
+        <label className="block">
+          <span className="mb-1.5 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted">Email</span>
+          <input name="email" type="email" defaultValue={email} placeholder="you@example.com" className="w-full rounded-xl border border-surface bg-background px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-light focus:border-accent" />
+        </label>
+
         <label className="block">
           <span className="mb-1.5 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted">
             Bio
@@ -122,13 +130,9 @@ export default function ProfileEditForm({
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white transition hover:bg-accent-hover disabled:opacity-50"
-        >
-          {pending ? "Saving…" : "Save profile"}
-        </button>
+        <SubmitButton pendingLabel="Saving…" className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white transition hover:bg-accent-hover">
+          Save profile
+        </SubmitButton>
       </form>
     </Panel>
   );

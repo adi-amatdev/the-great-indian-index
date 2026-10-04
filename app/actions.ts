@@ -11,8 +11,10 @@ import {
 import { getIndex } from "@/lib/indices";
 import {
   addCollaborator,
+  acceptInvite,
   canEditCustomIndex,
   customId,
+  declineInvite,
   getCustomIndexForUser,
   removeCollaborator,
 } from "@/lib/custom-indexes";
@@ -30,7 +32,8 @@ export async function registerAction(
 ): Promise<AuthState> {
   const username = String(formData.get("username") ?? "");
   const password = String(formData.get("password") ?? "");
-  const res = await registerUser(username, password);
+  const email = String(formData.get("email") ?? "");
+  const res = await registerUser(username, password, email);
   if (!res.ok) return { error: res.error };
   redirect("/portfolio");
 }
@@ -280,6 +283,32 @@ export async function removeCollaboratorAction(
   return { ok: true };
 }
 
+export async function acceptInviteAction(formData: FormData): Promise<CustomIndexActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Log in to accept invites." };
+  const rawId = String(formData.get("inviteId") ?? "");
+  if (!/^\d+$/.test(rawId)) return { error: "Invalid invite." };
+  const id = BigInt(rawId);
+  const result = await acceptInvite(user.id, id);
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/inbox");
+  revalidatePath("/custom");
+  revalidatePath("/compare");
+  return { ok: true };
+}
+
+export async function declineInviteAction(formData: FormData): Promise<CustomIndexActionState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Log in to decline invites." };
+  const rawId = String(formData.get("inviteId") ?? "");
+  if (!/^\d+$/.test(rawId)) return { error: "Invalid invite." };
+  const id = BigInt(rawId);
+  const result = await declineInvite(user.id, id);
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/inbox");
+  return { ok: true };
+}
+
 // ---- Profile ----------------------------------------------------------------
 
 export type ProfileState = { error?: string; ok?: boolean } | undefined;
@@ -293,6 +322,12 @@ export async function updateProfileAction(
 
   const bio = String(formData.get("bio") ?? "").trim().slice(0, 160);
   const about = String(formData.get("about") ?? "").trim().slice(0, 1000);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: "Enter a valid email address." };
+  if (email) {
+    const taken = await prisma.user.findFirst({ where: { email, NOT: { id: user.id } }, select: { id: true } });
+    if (taken) return { error: "That email is already registered." };
+  }
 
   let links: { label: string; url: string }[] = [];
   const rawLinks = String(formData.get("links") ?? "").trim();
@@ -320,9 +355,19 @@ export async function updateProfileAction(
     data: {
       bio: bio || null,
       about: about || null,
+      email: email || null,
       links: links.length ? links : undefined,
     },
   });
   revalidatePath(`/user/${user.username}`);
   return { ok: true };
+}
+
+export async function deleteAccountAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (String(formData.get("confirmation") ?? "") !== "DELETE") return;
+  await prisma.user.delete({ where: { id: user.id } });
+  await logoutUser();
+  redirect("/");
 }

@@ -11,6 +11,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import StatCard from "@/components/ui/StatCard";
 import ChangePill from "@/components/ui/ChangePill";
 import { ArrowRight, LogOut } from "@/components/ui/icons";
+import AccountDangerZone from "@/components/AccountDangerZone";
 
 export const metadata = { title: "Portfolio - Bharat Indexes" };
 export const dynamic = "force-dynamic";
@@ -264,6 +265,10 @@ export default async function PortfolioPage() {
           </div>
         </section>
       )}
+
+      <section className="mt-8">
+        <AccountDangerZone />
+      </section>
 
       <footer className="mt-12 text-center text-xs text-muted-light">
         Paper money only · started with {inr(startWorth)} · not investment advice.

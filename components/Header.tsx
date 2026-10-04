@@ -12,6 +12,7 @@ const NAV = [
   { href: "/leaderboard", label: "Leaders" },
   { href: "/custom", label: "My indexes" },
   { href: "/portfolio", label: "Portfolio" },
+  { href: "/inbox", label: "Inbox" },
 ];
 
 function inr(v: number) {
@@ -98,7 +99,7 @@ export default function Header() {
                 {inr(me.cash)}
               </span>
               <Link
-                href="/portfolio"
+                href={`/user/${me.username}`}
                 className="rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-accent-hover"
               >
                 @{me.username}

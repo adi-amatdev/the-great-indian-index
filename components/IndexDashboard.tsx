@@ -159,6 +159,8 @@ export default function IndexDashboard({
             points={data.points}
             range={range}
             changePct={data.changePct}
+            asOf={data.asOf}
+            marketOpen={market.open}
           />
         </div>
 

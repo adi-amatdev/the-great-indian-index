@@ -11,6 +11,7 @@ import MarketStatus from "./MarketStatus";
 import { ArrowRight } from "./ui/icons";
 
 type Row = IndexData & {
+  rank: number;
   custom?: boolean;
   creatorUsername?: string;
   risk: {
@@ -39,19 +40,24 @@ const RANK_STYLES = [
 
 export default function LeaderboardTable() {
   const [period, setPeriod] = useState<RangeKey>("1M");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [rows, setRows] = useState<Row[]>([]);
   const [loadedPeriod, setLoadedPeriod] = useState<RangeKey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/leaderboard?range=${period}`, { signal: controller.signal })
+    fetch(`/api/leaderboard?range=${period}&page=${page}&pageSize=12`, { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) throw new Error("Leaderboard unavailable.");
         return r.json();
       })
-      .then((d: { rows: Row[] }) => {
+      .then((d: { rows: Row[]; totalPages: number; total: number }) => {
         setRows(d.rows);
+        setTotalPages(d.totalPages);
+        setTotal(d.total);
         setError(null);
         setLoadedPeriod(period);
       })
@@ -59,7 +65,7 @@ export default function LeaderboardTable() {
         if (e.name !== "AbortError") setError(e.message);
       });
     return () => controller.abort();
-  }, [period]);
+  }, [period, page]);
 
   const loading = loadedPeriod !== period;
 
@@ -81,7 +87,7 @@ export default function LeaderboardTable() {
           <Segmented<RangeKey>
             label="Leaderboard period"
             value={period}
-            onChange={setPeriod}
+            onChange={(next) => { setPeriod(next); setPage(1); }}
             options={PERIODS.map((p) => ({ value: p.key, label: p.label }))}
           />
         }
@@ -132,7 +138,7 @@ export default function LeaderboardTable() {
                             RANK_STYLES[index] ?? "text-muted-light"
                           }`}
                         >
-                          {String(index + 1).padStart(2, "0")}
+                          {String(row.rank).padStart(2, "0")}
                         </span>
                       </td>
                       <td className="px-3 py-3">
@@ -196,6 +202,30 @@ export default function LeaderboardTable() {
           </div>
         )}
       </div>
+
+      {!loading && !error && totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <span className="font-mono text-xs text-muted-light">
+            Showing {(page - 1) * 12 + 1}–{Math.min(page * 12, total)} of {total} indexes
+          </span>
+          <div className="flex gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((current) => current - 1)}
+              className="rounded-full border border-surface px-3 py-1.5 text-xs font-bold text-muted transition hover:border-accent hover:text-foreground disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((current) => current + 1)}
+              className="rounded-full border border-surface px-3 py-1.5 text-xs font-bold text-muted transition hover:border-accent hover:text-foreground disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <p className="mt-5 text-xs leading-relaxed text-muted-light">
         Risk metrics use the available observations, annualized from their

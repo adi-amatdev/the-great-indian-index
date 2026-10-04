@@ -36,6 +36,12 @@ export default function AuthForm() {
 
       <form action={action} className="space-y-4">
         <div>
+          {!isLogin && (
+            <div className="mb-4">
+              <label htmlFor="email" className="mb-1.5 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted">Email</label>
+              <input id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" className="w-full rounded-xl border border-surface bg-background px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-light focus:border-accent" />
+            </div>
+          )}
           <label
             htmlFor="username"
             className="mb-1.5 block font-mono text-[11px] font-bold uppercase tracking-wider text-muted"

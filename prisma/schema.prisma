@@ -12,6 +12,7 @@ datasource db {
 model User {
   id        BigInt    @id @default(autoincrement())
   username  String    @unique
+  email     String?   @unique
   passHash  String
   cash      Float
   createdAt BigInt
@@ -23,6 +24,8 @@ model User {
   trades    Trade[]
   customIndexes CustomIndex[]
   collaboratesOn CustomIndexCollaborator[]
+  sentInvites CustomIndexInvite[] @relation("InviteSender")
+  receivedInvites CustomIndexInvite[] @relation("InviteRecipient")
 
   @@map("users")
 }
@@ -78,6 +81,7 @@ model CustomIndex {
   updatedAt   BigInt
   constituents CustomIndexConstituent[]
   collaborators CustomIndexCollaborator[]
+  invites CustomIndexInvite[]
 
   @@index([userId, updatedAt(sort: Desc)])
   @@map("custom_indexes")
@@ -110,6 +114,23 @@ model CustomIndexCollaborator {
   @@id([customIndexId, userId])
   @@index([userId])
   @@map("custom_index_collaborators")
+}
+
+model CustomIndexInvite {
+  id            BigInt @id @default(autoincrement())
+  customIndex   CustomIndex @relation(fields: [customIndexId], references: [id], onDelete: Cascade)
+  customIndexId BigInt
+  inviter       User @relation("InviteSender", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviterId     BigInt
+  recipient     User @relation("InviteRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId   BigInt
+  status        String @default("pending") // pending | accepted | declined
+  createdAt     BigInt
+  respondedAt  BigInt?
+
+  @@index([recipientId, status, createdAt(sort: Desc)])
+  @@index([customIndexId, status])
+  @@map("custom_index_invites")
 }
 
 // Frequency-aware cache of computed index series. Storing the fully computed

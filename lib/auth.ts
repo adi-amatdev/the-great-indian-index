@@ -96,6 +96,7 @@ export type AuthResult = { ok: true } | { ok: false; error: string };
 export async function registerUser(
   username: string,
   password: string,
+  email: string,
 ): Promise<AuthResult> {
   username = username.trim().toLowerCase();
   if (username.length < 3)
@@ -104,13 +105,19 @@ export async function registerUser(
     return { ok: false, error: "Use only letters, numbers and underscores." };
   if (password.length < 6)
     return { ok: false, error: "Password must be at least 6 characters." };
+  email = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return { ok: false, error: "Enter a valid email address." };
 
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) return { ok: false, error: "That username is taken." };
+  const existingEmail = await prisma.user.findUnique({ where: { email } });
+  if (existingEmail) return { ok: false, error: "That email is already registered." };
 
   const user = await prisma.user.create({
     data: {
       username,
+      email,
       passHash: await hashPassword(password),
       cash: STARTING_CASH,
       createdAt: BigInt(Date.now()),
